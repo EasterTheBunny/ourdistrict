@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <title>The Park</title>
+  </head>
+  <body class="lift:content_id=main">
+  	<div id="main" class="lift:surround?with=minimal;at=content">
+  	  <head>
+		<script src="http://d3js.org/d3.v3.js"></script>
+  	  </head>
+  	  
+  	  <div class="container-fluid lift:ChartsPage" style="margin-top:100px">
+        <div class="row">
+          <div class="col-lg-3">
+          	<p><lift:Menu.item a:class="btn btn-primary btn-sm" name="CreateUser">Create Account</lift:Menu.item>
+          	<lift:test_cond.loggedout> ~> make some charts.</lift:test_cond.loggedout></p>
+            <form>
+              <fieldset>
+              	<span id="graph-select"></span>
+              </fieldset>
+              <fieldset id="adj">
+                <div class="checkbox">
+      			  <label>
+        		    <input type="checkbox"> Can't check this
+      			  </label>
+    			</div>
+              </fieldset>
+            </form>
+          </div>
+          <div class="col-lg-9">
+            <div id="graph-container" class="center-block">
+              
+            </div>
+          </div>
+        </div>
+        <span id="script"></span>
+      </div>
+  	
+  	
+  	
+    </div>
+  </body>
+</html>

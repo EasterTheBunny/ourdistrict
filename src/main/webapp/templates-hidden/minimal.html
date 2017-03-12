@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en-us" xmlns:lift="http://liftweb.net/">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="msapplication-tap-highlight" content="no"/>
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <title class="lift:Menu.title"></title>
+    
+    <link href="/classpath/fobo/bootstrap.css" rel="stylesheet" type="text/css" />
+
+    <link href="/static/css/clean-blog.min.css" rel="stylesheet" type="text/css" />
+
+    <!-- CUSTOM FONTS -->
+    <link href="/classpath/fobo/font-awesome.css" rel="stylesheet" type="text/css" />
+    <link href='https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+    <script id="jquery" src="/classpath/fobo/jquery.js" type="text/javascript"></script>
+    <script id="json" src="/classpath/json.js" type="text/javascript"></script>
+    
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    
+    <style type="text/css">
+		/*=================================================================*/
+		/*                      NAVIGATION BAR                              
+		/*=================================================================*/
+		.navbar{
+			background: #4285f4;
+			padding:0px 0;
+			-webkit-transition:all .3s ease;
+			-moz-transition:all .3s ease;
+			transition:all .3s ease;
+		}
+		.navbar-brand{
+			padding:0;
+		}
+		.navbar-brand > img{
+			height:25px;
+		}
+		.navbar-nav > li {
+			padding: 0;
+		}
+		.navbar-nav > li > a{
+			text-decoration:none;
+			background:#4285f4 !important;
+			text-transform:uppercase;
+			letter-spacing:1px;
+			font-size:13px;
+			color:#FFF;
+			color:rgba(255,255,255,.7);
+			-webkit-transition:all .3s ease;
+			-moz-transition:all .3s ease;
+			transition:all .3s ease;
+		}
+		.navbar-nav > li.active > a,
+		.navbar-nav > li > a:hover{
+			color:#FFF;
+		}
+		.navbar-toggle{
+			margin-top:5.5px;
+			margin-bottom:5.5px;
+		}
+		.navbar-toggle .icon-bar{
+			background:#202020;
+			height:3px;
+			width:28px;
+		}
+		.navbar-toggle .icon-bar+.icon-bar{
+			margin-top:5px;
+		}
+		body.scrolled .navbar{
+		    border-bottom: 1px solid #d5d3d3;
+			background:#FFF;
+			background:rgba(255,255,255,.9);
+			padding:10px 0;
+		}
+		.navbar-brand > .logo-dark{
+			display:none;
+		}
+		body.scrolled .navbar-brand > .logo-dark{
+			display:block;
+		}
+		body.scrolled .navbar-brand > .logo-light{
+			display:none;
+		}
+		body.scrolled .navbar-nav > li > a{
+			color:#202020;
+			color:rgba(0,0,0,.7);
+		}
+		body.scrolled .navbar-nav > li.active > a,
+		body.scrolled .navbar-nav > li > a:hover{
+			color:#202020;
+		}
+	</style>
+
+
+  </head>
+  <body>
+  
+  	<span data-lift='embed?what=_embeddedTopNavbar'> Embedding the
+		TopNavbar here</span>
+    
+    <div id="content" style="margin-top: 55px;">The main content will get bound here</div>
+    
+	<!-- FOOTER-->
+	<span data-lift='embed?what=_embeddedFooter'> Embedding the Footer here</span>
+
+    <script src="/classpath/fobo/bootstrap.js" type="text/javascript"></script>
+    
+	<!-- SOME JS FILES -->
+    <script src="/static/js/clean-blog.min.js"></script>
+	
+  </body>
+</html>

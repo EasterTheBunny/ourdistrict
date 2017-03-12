@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+
+<title>Embedded Topbar template</title>
+</head>
+
+<!-- This is an embedded piece of html -->
+<body class="lift:content_id=header">
+
+    <!-- Navigation -->
+  	<nav id="header" class="navbar navbar-default navbar-custom navbar-fixed-top">
+		<div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+			<div class="navbar-header page-scroll">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse-1">
+					<span class="sr-only">Toggle Navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/">
+					<img alt="egalitarian-party" height="25" src="/images/toolbox.png"/>
+				</a>
+			</div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+			<div class="navbar-collapse collapse" id="navbar-collapse-1">
+				<span data-lift="FoBo.Bs3Navbar.builderPullRight?group=topRight"></span> 
+				<ul class="nav navbar-nav navbar-right">
+					<lift:test_cond.loggedin>
+						<li><lift:Menu.item name="Add Visualization"></lift:Menu.item></li>
+						<li><lift:Menu.item name="Add Speech"></lift:Menu.item></li>
+						<li><lift:Menu.item name="Add Topic"></lift:Menu.item></li>
+					</lift:test_cond.loggedin>
+				</ul>
+				<span data-lift="FoBo.Bs3Navbar.builder?group=navbar"></span>
+			</div>
+		</div>
+	</nav>
+
+</body>

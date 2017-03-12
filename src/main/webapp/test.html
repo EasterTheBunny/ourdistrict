@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <title>The Test Page</title>
+  </head>
+  <body class="lift:content_id=main">
+  	<div id="main" class="lift:surround?with=default;at=content">
+  	  <head>
+  	    <style>
+
+form {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.label {
+  font-size: 10px;
+  color: #999;
+  font-weight:normal;
+}
+
+</style>
+<script src="http://d3js.org/d3.v3.js"></script>
+  	  </head>
+  	  
+      <div class="container-fluid" style="margin-top:60px">
+        <div class="row">
+          <div class="col-lg-3">
+            <form>
+              <fieldset>
+                <select class="form-control" name="g">
+                  <option value="choose">Choose a graph</option>
+                </select>
+              </fieldset>
+              <fieldset id="adj">
+                <div class="checkbox">
+      			  <label>
+        		    <input type="checkbox"> Can't check this
+      			  </label>
+    			</div>
+              </fieldset>
+            </form>
+          </div>
+          <div class="col-lg-9">
+            <div id="graph-container" class="center-block">
+              
+            </div>
+          </div>
+        </div>
+      </div>
+
+<script>
+
+graph("senate");
+var formContainer = $('#adj');
+formContainer.empty();
+formContainer.append('<h3>Senate Activity</h3>');
+formContainer.append('<p>How active is your senator? Find out here.</p>');
+formContainer.append('<div class="radio"><label><input class="adj-input" type="radio" name="mode" value="bills_proposed" checked> Colorize By Party</label></div>');
+formContainer.append('<div class="radio"><label><input class="adj-input" type="radio" name="mode" value="sort"> Colorize By State</label></div>');
+
+    
+function graph(seat) {
+d3.json("/json/" + seat + "/billpiedata", function(error, root) {
+	var totalBills = 0;
+	root.forEach(function(object, index) {
+		totalBills+=object.bills_proposed;
+	});
+
+	var width = 700,
+    height = 700,
+    radius = Math.min(width, height) / 2,
+    color = d3.scale.ordinal()
+    	.domain(root.map(function(obj){ return obj.name; }))
+    	.rangeRoundPoints([0, 210]);
+    
+    var color2 = d3.scale.category20b();
+    var color3 = d3.scale.ordinal()
+    	.domain(["rep","dem"])
+    	.range(["blue","yellow","red"]);
+
+	var vis = d3.select("#graph-container").append("svg:svg").attr("class","center-block").data([root]).attr("width", width).attr("height", height).append("svg:g").attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
+
+vis.append("svg:circle")
+	.attr("r", 300)
+	.attr("stroke-dasharray", "10,10")
+	.style("stroke", "gray")
+	.style("fill", "none");
+	
+var circlelabel = d3.svg.arc()
+		.innerRadius(100)
+		.outerRadius(300)
+		.startAngle(0)
+		.endAngle(Math.PI/2);
+		
+vis.append("svg:path")
+	.attr("d", circlelabel)
+	.attr("id", "dash")
+	.attr("fill","none");
+	
+vis.append("svg:text")
+		.attr("x", 35)
+		.attr("dy", -2)
+		.attr("class","label")
+		.append("textPath")
+		.attr("stroke","#999")
+		.attr("xlink:href", "#dash")
+		.text("33");
+		
+vis.append("svg:text")
+		.attr("x", 0)
+		.attr("y", -40)
+		.attr("fill", "black")
+		.attr("text-anchor", "middle")
+		.text("114th Congress");
+		
+vis.append("svg:text")
+		.attr("x", 0)
+		.attr("y", -20)
+		.attr("fill", "black")
+		.attr("text-anchor", "middle")
+		.text(seat);
+		
+vis.append("svg:text")
+		.attr("x", 0)
+		.attr("y", 0)
+		.attr("fill", "black")
+		.attr("text-anchor", "middle")
+		.text(totalBills + " bills");
+
+	var pie = d3.layout.pie().sort(null).value(function(d){ return d.sort; });
+
+var arc = d3.svg.arc()
+    .innerRadius(function(d) { return 200; })
+    .outerRadius(function(d) { return d.data.bills_proposed * 3 + 200; });
+    //.padAngle(function(d){ return .0023;});
+    
+var arclabel = d3.svg.arc()
+	.innerRadius(function(d) { return 100; })
+	.outerRadius(function(d) { return 250; })
+    .padAngle(function(d){ return .0023;});
+
+var arcs = vis.selectAll("g.slice").data(pie).enter().append("svg:g").attr("class","slice");
+
+arcs.append("svg:path")
+	.attr("fill", function(d) { return color3(d.data.party); })
+	.attr("d", function(d){return arc(d);});
+
+arcs.append("svg:text").attr("transform", function(d){
+			//d.innerRadius = 0;
+			//d.outerRadius = d.bills_proposed;
+			
+			//console.log(arc.centroid(d));
+    return "translate(" + arc.centroid(d) + ")";}).attr("text-anchor", "middle").attr("fill","none").attr("class","text").text( function(d, i) {
+    return root[i].state;}
+		);
+		
+arcs.on("mouseover", function change(d, index) {
+	vis.append("svg:text")
+		.attr("x", 0)
+		.attr("y", 40)
+		.attr("class", "slicelabel")
+		.attr("text-anchor", "middle")
+		.text(d.data.name + " (" + d.data.state + ") - " + d.data.bills_proposed);
+});
+
+arcs.on("mouseout", function change(d, index) {
+	//d.selectAll(".text").attr("fill","black");
+	vis.selectAll("text.slicelabel").remove();
+});
+		
+/*arcs.append("path")
+		.attr("d", function(d){return arclabel(d);})
+		.attr("id", function(d){ return "arcpath" + d.data.state; })
+		.attr("fill", "none");
+		
+arcs.append("svg:text")
+		.attr("x", 0)
+		.attr("dy", 0)
+		.attr("class","label")
+		.append("textPath")
+		//.attr("stroke","#666")
+		.attr("xlink:href", function(d){ return "#arcpath" + d.data.state; })
+		.text(function(d, i){ return root[i].state; });*/
+		
+d3.selectAll("input.adj-input").on("change", function change() {
+    var value = this.value === "sort"
+        ? function(d) { return color2(d.data.state); }
+        : function(d) { return color3(d.data.party); };
+	
+	arc.outerRadius(value);
+	//console.log(arcs);
+    arcs.select("path").transition()
+        .duration(400)
+        //.attr("d", tweened);
+        .attr("fill", value);
+  });
+});
+
+
+
+function tweened(a) {
+  return arc(a);
+}
+}
+
+
+
+</script>
+
+
+  </body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <title>Crowdsourced Politics</title>
+  </head>
+  <body class="lift:content_id=main">
+  	
+    <div id="main" class="lift:surround?with=default;at=content">
+		<head>
+			<link rel="stylesheet" href="/static/css/paper.min.css" />
+			<script src="/static/js/jquery-ui.min.js"></script>
+			<style>
+			.ui-autocomplete {
+			    position: absolute;
+			    top: 100%;
+			    left: 0;
+			    z-index: 1000;
+			    float: left;
+			    display: none;
+			    min-width: 160px;  
+			    margin: 0 0 10px 25px;
+			    list-style: none;
+			    background-color: #ffffff;
+			    border-color: #aaa;
+			    border-style: solid;
+			    border-width: 1px;
+			    -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+			    -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+			    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+			}
+
+			.ui-menu li {
+				list-style-type: none;
+				margin:0;
+			}
+			    
+			    .ui-menu .ui-menu-item {
+			    	padding: 8px 8px;
+			    	clear:left;
+			    	float:left;
+			    	width:100%;
+			    	margin:0;
+			    }
+
+			.ui-menu-item > a.ui-corner-all {
+			    display: block;
+			    clear: both;
+			    font-weight: normal;
+			    line-height: 18px;
+			    color: #555555;
+			    white-space: nowrap;
+			    text-decoration: none; 
+			}
+			.ui-menu-item:hover {
+				background-color:#ededed;
+			}
+
+			.paper p {
+				text-indent: 50px;
+			}
+			</style>
+		</head>
+    
+		<section class="main-section parallax" data-parallax="scroll" data-image-src="/images/40.jpg">
+			<div class="container">
+		  	<div class="row">
+		  	  <div class="col-md-9">
+
+		  	  	<div class="paper paper-curl">
+					<h3>A District for Everyone</h3>
+
+					<p class="lead">Our political atmosphere has taken a sudden turn toward a path that is greatly lacking in respect for everyday people. Representatives and senators are avoiding their constituents and more importantly, avoiding discussion.</p>
+					<p class="lead">We need leadership founded in free thinking with a strong desire to resist the political extremes. We need to re-align with the masses through the lens of liberty instead of authority.</p>
+
+					<address>
+						<strong>- Awbrey Hughlett</strong><br/>
+						Federal Candidate for Office<br/>
+						United States House of Representatives<br/>
+						Texas District 32
+					</address>
+					
+		  	  	</div>
+
+		  	  </div>
+		  	  <div class="col-md-3">
+		  	  	<div class="ribbon ribbon-left ribbon-in">
+		  	  		<div class="ribbon-stitch">
+		  	  			<div class="ribbon-fabric"><p>Awbrey Hughlett</p></div>
+		  	  			<div class="ribbon-top-left"></div>
+		  	  			<div class="ribbon-bottom-left"></div>
+		  	  		</div>
+		  	  	</div>
+		  	  	<div class="stitch">
+			  	  	<img src="/images/awbrey_hughlett.jpg" class="img-responsive" alt="Awbrey Hughlett" />
+			  	  	<p style="margin-top: 15px;">Awbrey Hughlett is a web developer by day and a congressional candidate by night</p>
+		  	  	</div>
+		  	  </div>
+
+
+		  	</div>
+			</div>
+		</section>
+	  
+		<section class="describe-section">
+			<div class="container">
+				<div class="section-header text-center">
+					<h2 class="wow animated" data-wow-delay=".2s">Guiding Principals</h2>
+					<p class="wow animated" data-wow-delay=".3s">Every leader needs a framework to direct dialog and criticism.</p>
+				</div>
+
+				<div class="row">
+					<div class="col-md-4">
+						<div class="icon-feature">
+							<div class="icon">
+								<i class="ion-speakerphone"></i>
+							</div>
+							<div class="content">
+								<h4>Liberty</h4>
+								<p>People need freedom to get on with their lives. Government needs to protect that ability.</p>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="icon-feature">
+							<div class="icon">
+								<i class="ion-ios-chatboxes"></i>
+							</div>
+							<div class="content">
+								<h4>Conflict</h4>
+								<p>When freedoms overlap, an objective mediator is often necessary to manage the exchange. Government plays this role to ensure liberties are protected.</p>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="icon-feature">
+							<div class="icon">
+								<i class="ion-medkit"></i>
+							</div>
+							<div class="content">
+								<h4>Services</h4>
+								<p>Pooled resources are a way for government to provide services for people that individuals and companies cannot or will not.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	  
+		<section class="mockup-sectionb section-2" id="rank">
+			<div class="container">
+				<div class="section-header text-center">
+					<h2>What's Important to You?</h2>
+					<p>Give your input. Exercise your freedom to influence policy.</p>
+				</div>
+			  <div class="row" style="margin:50px 0px">
+			  	<div class="col-md-7" style="padding:20px;border:1px solid #aaa">
+				  <ul class="list-group lift:SortedTopicSnippet.writeList" style="cursor:pointer" id="sorted-topics">
+					<li id="item" class="list-group-item"><span name="list-hash" id="" class="hash"></span><span name="title">Immigration</span><span style="margin:0px 5px" class="glyphicon glyphicon-remove pull-right text-danger" aria-hidden="true"></span><a name="search" style="margin:0px 5px" class="pull-right" href="#"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></a></li>
+				  </ul>
+				  <div class="input-group">
+				  	<input class="form-control" type="text" id="new-item" placeholder="write your own" />
+				  	<span class="input-group-btn">
+				  <button class="btn btn-primary" id="new-item-button" type="button">add to list</button>
+					</span>
+				  </div>
+				</div>
+				<div class="col-md-5">
+				  <p>Everybody has their own range of important topics and concerns. See how yours compare to everyone else.</p>
+				  <p>The list of topics to the left is sorted from most important on top to least on bottom. Adjust the list to your liking to provide your own opinion.</p>
+				</div>
+				<script>
+					$(function() {
+						function updateSort() {
+							var str = [];
+							$("#sorted-topics li").each(function(index, elem){
+								var toAdd = $(elem).children().first().attr("id");
+								if(toAdd.length > 0 && toAdd != "undefined") str.push(toAdd);
+							});
+
+							$.ajax({
+								url:"json/sortedlist/sort?o=" + str.join(",")
+							});
+						}
+						$("#sorted-topics").sortable({
+							stop: function(event, ui) {
+								updateSort();
+							}
+						});
+						$("#sorted-topics").disableSelection();
+						$("#sorted-topics li").each(function(index, elem){
+							$(elem).children(".glyphicon-remove").first().on('click', function(event){
+								$(elem).remove();
+								updateSort();
+							});
+						});
+						$("#new-item-button").click(function() {
+							$.ajax({
+								url: "json/sortedlist/add",
+								method: "POST",
+								data: { "term": $("#new-item").val() }
+							}).done(function(data){
+								//<a name="contact" style="margin:0px 5px" class="pull-right" href="#"><span class="glyphicon glyphicon-envelope" aria-hidden="true"></span></a>
+								if(data.status == "success") {
+									var li = $('<li class="list-group-item"><span class="hash" name="list-hash" id="' + data.value + '"></span><b>' + $("#new-item").val() + '</b></li>');
+									li.append('<a name="search" style="margin:0px 5px" class="pull-right" href=/topic?q="' + $("#new-item").val() + '"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></a>');
+									$("#sorted-topics").append(li);
+								} else alert(data.status);
+								updateSort();
+							});
+						});
+						
+						var cache = {};
+						$("#new-item").autocomplete({
+							minLength: 2,
+							source: function(request, response) {
+								var term = request.term;
+								if(term in cache) {
+									response(cache[term]);
+									return;
+								}
+								
+								$.getJSON("/json/sortedlist/suggest", request, function(data, status, xhr) {
+									cache[term] = data;
+									response(data);
+								});
+							}
+						});
+					});
+				</script>
+			  </div>
+			</div>
+		</section>
+	  
+		<section class="features-section" id="faq">
+			<div class="container">
+						<div class="section-header text-center">
+							<h2>Government as a Function</h2>
+							<p>Policy is a process that merges ideas. How?</p>
+						</div>
+
+				<div class="row">
+					
+					<!-- SX -->
+					<div class="col-md-4">
+						<div class="col-features text-right">
+                            
+                            <div class="col-feature wow fadeInLeft" data-wow-delay=".4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInLeft;">
+								<i class="ion-network"></i>
+								<h4>Autonomy</h4>
+								<p>Individual liberty are the focal point of our founding principles.</p>
+							</div>
+							
+							<div class="col-feature wow fadeInLeft" data-wow-delay=".4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInLeft;">
+								<i class="ion-person-stalker"></i>
+								<h4>Respect</h4>
+								<p>Peaceful resolution revolves around a respect for alternate solutions.</p>
+							</div>
+							
+							<div class="col-feature wow fadeInLeft" data-wow-delay=".2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInLeft;">
+								<i class="ion-plus"></i>
+								<h4>Accessibility</h4>
+								<p>An individual's access to resources often correlates to economic success.</p>
+							</div>
+							
+						</div>
+					</div>
+					
+
+					<!-- capitol mockup -->
+					<div class="col-md-4">
+						<div class="mockup wow pulse" data-wow-delay=".2s" style="visibility: visible; animation-delay: 0.2s; animation-name: pulse;">
+							<img src="images/capitol.png" alt="">
+						</div>
+					</div>
+					
+
+					<!-- DX -->
+					<div class="col-md-4">
+						<div class="col-features text-left">
+							
+							<div class="col-feature wow fadeInRight" data-wow-delay=".2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInRight;">
+								<i class="ion-clipboard"></i>
+								<h4>Freedom</h4>
+								<p>Enumerating rights is a distraction from the conversation of individual freedoms.</p>
+							</div>
+							
+							<div class="col-feature wow fadeInRight" data-wow-delay=".4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInRight;">
+								<i class="ion-lightbulb"></i>
+								<h4>Compromise</h4>
+								<p>Ideas in a diverse society are not sacred. All must be considered honestly.</p>
+							</div>
+                            
+                            <div class="col-feature wow fadeInRight" data-wow-delay=".4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInRight;">
+								<i class="ion-pie-graph"></i>
+								<h4>Opportunity</h4>
+								<p>No individual or group should be inhibited by another on prejudice.</p>
+							</div>
+							
+						</div>
+					</div>
+                    
+				</div>
+
+			</div>
+		</section>
+
+      
+    </div>
+  </body>
+</html>
+

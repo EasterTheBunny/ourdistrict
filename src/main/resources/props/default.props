@@ -1,0 +1,4 @@
+db.driver=org.postgresql.Driver
+db.url=jdbc:postgresql://localhost:5432/political
+db.user=webapp
+db.password=asdf1ASDF

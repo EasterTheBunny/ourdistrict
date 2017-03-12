@@ -1,0 +1,19 @@
+{
+	"name": "ourdistrict",
+	"authors": [
+		"Awbrey Hughlett <athughlett@gmail.com>"
+	],
+	"description": "hacking politics",
+	"main": "vendor",
+	"license": "GPL-3.0",
+	"homepage": "",
+	"private": true,
+	"dependencies": {
+		"jquery-ui": "1.12.1",
+		"beemuse-paper": "1.0.0",
+		"konva": "1.4.0",
+		"babylon-grid": "2.3",
+		"google-diff-match-patch-js": "1.0.0",
+		"jquery-pagewalkthrough": "2.7.2"
+	}
+}
