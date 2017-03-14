@@ -32,3 +32,49 @@ margin-top: -5px;
 -o-transition: all 0.3s ease-in-out;
 transition: all 0.3s ease-in-out;
 }
+
+article {
+    background: #fff;
+    -webkit-border-radius: 2px 2px;
+    -moz-border-radius: 2px / 2px;
+    border-radius: 2px / 2px;
+    -webkit-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    -moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    margin: 20px 10px;
+    overflow: hidden;
+}
+
+article {
+	display: block;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    font-size: 100%;
+    vertical-align: baseline;
+    font-size: 13px !important;
+}
+
+article .title {
+	background: #99301c;
+	color: white;
+	text-align: center;
+	padding: 15px 20px;
+	font-size: 1.3em;
+	margin-bottom: 10px;
+	font-weight: 300;
+	font-style: italic;
+	border-bottom: 5px solid #832918;
+}
+
+article .desc {
+    padding: 20px;
+    color: #000;
+    font-style: italic;
+}
+
+article .attrib {
+	padding: 5px 20px;
+	color: #000;
+	font-style: italic;
+}

@@ -33,6 +33,11 @@ module.exports = function(grunt) {
 					dest: '<%= config.dist %>/js'
 				},{
 					expand: true,
+					cwd: '<%= config.app %>/babylon-grid/dist/css',
+					src: 'babylongrid-default.css',
+					dest: '<%= config.dist %>/css'
+				},{
+					expand: true,
 					cwd: '<%= config.app %>/jquery-pagewalkthrough/dist',
 					src: 'jquery.pagewalkthrough.min.js',
 					dest: '<%= config.dist %>/js'
