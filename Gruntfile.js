@@ -23,8 +23,8 @@ module.exports = function(grunt) {
 					dest: '<%= config.dist %>/js'
 				},{
 					expand: true,
-					cwd: '<%= config.app %>/beemuse-paper/dist',
-					src: 'paper.min.css',
+					cwd: '<%= config.app %>/beemuse/dist',
+					src: 'beemuse.min.css',
 					dest: '<%= config.dist %>/css'
 				},{
 					expand: true,
@@ -33,8 +33,18 @@ module.exports = function(grunt) {
 					dest: '<%= config.dist %>/js'
 				},{
 					expand: true,
+					cwd: '<%= config.app %>/babylon-grid/dist/css',
+					src: 'babylongrid-default.css',
+					dest: '<%= config.dist %>/css'
+				},{
+					expand: true,
 					cwd: '<%= config.app %>/jquery-pagewalkthrough/dist',
 					src: 'jquery.pagewalkthrough.min.js',
+					dest: '<%= config.dist %>/js'
+				},{
+					expand: true,
+					cwd: '<%= config.app %>/parallax.js',
+					src: 'parallax.min.js',
 					dest: '<%= config.dist %>/js'
 				},{
 					expand: true,
@@ -66,6 +76,16 @@ module.exports = function(grunt) {
 					cwd: '<%= config.app %>/jquery-ui/themes/base/images',
 					src: '**',
 					dest: '<%= config.dist %>/css/images'
+				},{
+					expand: true,
+					cwd: '<%= config.app %>/ionicons/fonts',
+					src: '**',
+					dest: '<%= config.dist %>/fonts'
+				},{
+					expand: true,
+					cwd: '<%= config.app %>/ionicons/css',
+					src: 'ionicons.min.css',
+					dest: '<%= config.dist %>/css'
 				}]
 			}
 		},
@@ -90,7 +110,10 @@ module.exports = function(grunt) {
 		uglify: {
 			dist: {
 				options: {
-					mangle: false
+					mangle: false,
+					preserveComments: function(node, comment) {
+						return /Copyright/.test(comment.value);
+					}
 				},
 				files: [{
 					expand: true,
@@ -116,6 +139,16 @@ module.exports = function(grunt) {
 					ext: '.min.css'
 				}]
 			}
+		},
+		coffee: {
+			dist: {
+				options: {
+					bare: true
+				},
+				files: {
+					'<%= config.dist %>/js/main.js': '<%= config.src %>/coffee/main.coffee'
+				}
+			}
 		}
 	});
 
@@ -123,6 +156,7 @@ module.exports = function(grunt) {
 	//grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
+	grunt.loadNpmTasks('grunt-contrib-coffee');
 
-    grunt.registerTask('build', ['copy', 'uglify', 'cssmin']);
+    grunt.registerTask('build', ['copy', 'uglify', 'cssmin', 'coffee']);
 };

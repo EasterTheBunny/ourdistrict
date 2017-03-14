@@ -10,10 +10,12 @@
 	"private": true,
 	"dependencies": {
 		"jquery-ui": "1.12.1",
-		"beemuse-paper": "1.0.0",
+		"beemuse": "0.3.0",
 		"konva": "1.4.0",
 		"babylon-grid": "2.3",
 		"google-diff-match-patch-js": "1.0.0",
-		"jquery-pagewalkthrough": "2.7.2"
+		"jquery-pagewalkthrough": "2.7.2",
+		"parallax.js": "1.4.2",
+		"ionicons": "2.0.1"
 	}
 }
