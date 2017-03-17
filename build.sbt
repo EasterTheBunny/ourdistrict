@@ -62,7 +62,10 @@ libraryDependencies ++= {
         "io.github.cloudify"      %% "spdf"                   % "1.4.0",
         "com.lambdaworks"         % "scrypt"                  % "1.4.0",
         "org.yaml"                % "snakeyaml"               % "1.18",
-        "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test"
+        "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test",
+        "org.scalaj"              %% "scalaj-http"            % "2.3.0",
+        "net.jxta"                % "jxta-jxse"               % "2.5"
+
     )
 }
 

@@ -9,3 +9,6 @@
 /*.log
 /bower_components
 /node_modules
+/.idea
+/.idea_modules
+/projectFilesBackup
