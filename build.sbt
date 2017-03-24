@@ -11,6 +11,12 @@ scalaVersion := "2.11.8"
 
 gruntSettings
 
+unmanagedJars in Compile <++= baseDirectory map { base =>
+    val libs = base / "lib"
+    //val dirs = (libs / "batik") +++ (libs / "libtw") +++ (libs / "kiama")
+    (libs ** "*.jar").classpath
+}
+
 resolvers ++= Seq("snapshots"     at "http://oss.sonatype.org/content/repositories/snapshots",
                   "staging"       at "http://oss.sonatype.org/content/repositories/staging",
                   "releases"      at "http://oss.sonatype.org/content/repositories/releases",
@@ -64,7 +70,7 @@ libraryDependencies ++= {
         "org.yaml"                % "snakeyaml"               % "1.18",
         "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test",
         "org.scalaj"              %% "scalaj-http"            % "2.3.0",
-        "net.jxta"                % "jxta-jxse"               % "2.5"
+        "com.kenai.jxse"          % "jxse"                    % "2.7"
 
     )
 }

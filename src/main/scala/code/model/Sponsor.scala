@@ -65,7 +65,7 @@ class Sponsor extends LongKeyedMapper[Sponsor] with IdPK {
   object religion extends MappedString(this, 100)
   
   def countProposedBills = BillSponsor.count(By(BillSponsor.sponsor, this.id.get),
-		  									By(BillSponsor.congress, 114),
+		  									By(BillSponsor.congress, Props.get("settings.congress").getOrElse("115").toInt),
 		  									By(BillSponsor.sponsorship, "sponsor"))
 		  									/*
 		  									 * 

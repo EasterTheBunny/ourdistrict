@@ -32,7 +32,9 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   object bill_id extends MappedString(this, 25)
   object bill_type extends MappedString(this, 10)
   object by_request extends MappedBoolean(this)
-  object congress extends MappedInt(this)
+  object congress extends MappedInt(this) {
+    override def dbIndexed_? = true
+  }
   object number extends MappedInt(this)
   object official_title extends MappedString(this, 5000)
   object popular_title extends MappedString(this, 5000)
@@ -41,6 +43,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   object status_at extends MappedDate(this)
   object subjects_top_term extends MappedString(this, 100)
   object updated_at extends MappedDateTime(this)
+  object last_scrape extends MappedDateTime(this)
   /*object actions extends MappedString(this, 20000) {
     implicit val formats = DefaultFormats // Brings in default date formats etc.
     case class Reference(reference: Option[String], reference_type: Option[String])
@@ -101,4 +104,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
 object Bill extends Bill with LongKeyedMetaMapper[Bill] {
   override def dbTableName = "bill"
 
+  def billTimestampInfoForCongress(congress: Integer): List[Bill] =
+    Bill.findAllFields(Seq[SelectableField](Bill.id, Bill.bill_type, Bill.bill_id, Bill.last_scrape),
+                        By(Bill.congress, congress))
 }

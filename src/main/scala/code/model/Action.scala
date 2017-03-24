@@ -36,6 +36,7 @@ class Action extends LongKeyedMapper[Action] with IdPK {
     override def dbIndexed_? = true
   }
   object acted_at extends MappedDateTime(this)
+  object action_code extends MappedString(this, 255)
   object in_committee extends MappedString(this, 255)
   object how extends MappedString(this, 100)
   object bill_ids extends MappedString(this, 1000)

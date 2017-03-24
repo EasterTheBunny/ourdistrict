@@ -12,3 +12,6 @@
 /.idea
 /.idea_modules
 /projectFilesBackup
+/.cache
+/.history
+/lib/target
