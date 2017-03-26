@@ -20,21 +20,17 @@ package bootstrap.liftweb
 import net.liftweb._
 import util.Helpers._
 import util.Props
-
 import common._
 import http._
-import js.jquery.JQueryArtifacts
 import sitemap._
 import Loc._
 import mapper._
-import net.liftmodules.{FoBo,FoBoBs}
-
+import net.liftweb.db.DBLogEntry
+import net.liftmodules.FoBo
 import code.model._
-import code.lib.{JsonNodeHandler,JsonDataHandler,PDFServer,ParseBillsToDB,ParseLegislatorsToDB,JsonUserSortedListHandler}
-import code.snippet.{TopicPage, AllTopicsPage,ChartsPage}
-import net.liftweb.http.provider.HTTPParam
-import scravatar.{Gravatar,DefaultImage}
-
+import code.lib._
+import code.snippet.{AllTopicsPage, ChartsPage, TopicPage}
+import scravatar.{DefaultImage, Gravatar}
 import java.sql._
 
 object PrimaryDBVender extends ConnectionManager {
@@ -102,8 +98,20 @@ object PrimaryDBVender extends ConnectionManager {
  */
 class Boot {
   def boot {
-    
+    val logger = Logger(classOf[Boot])
+
+    logger.debug("testing")
+
     DB.defineConnectionManager(DefaultConnectionIdentifier, PrimaryDBVender)
+    DB.addLogFunc {
+      case (log, duration) => {
+        //println("Total query time : %d ms".format(duration))
+        log.allEntries.foreach {
+          case DBLogEntry(stmt, duration) =>
+            //println("  %s in %d ms".format(stmt, duration))
+        }
+      }
+    }
 
     // Use Lift's Mapper ORM to populate the database
     // you don't need to use Mapper to use Lift... use
@@ -135,15 +143,17 @@ class Boot {
     LiftRules.dispatch.append(JsonDataHandler)
     LiftRules.dispatch.append(JsonUserSortedListHandler)
 
-    Props.mode match {
-      case Props.RunModes.Production => {
+    Props.get("settings.fullnode") match {
+      case Full(opt) if(opt == "true") => {
         //ParseBillsToDB ! ParseBillsToDB.ParseBills
-        //ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
-    
-        //LiftRules.unloadHooks.append( () => ParseBillsToDB ! ParseBillsToDB.Stop )
-        //LiftRules.unloadHooks.append( () => ParseLegislatorsToDB ! ParseLegislatorsToDB.Stop )
+        ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
+
+        LiftRules.unloadHooks.append( () => ParseBillsToDB ! ParseBillsToDB.Stop )
+        LiftRules.unloadHooks.append( () => ParseLegislatorsToDB ! ParseLegislatorsToDB.Stop )
       }
-      case _ =>
+      case _ => {
+        println("You have opted to NOT run a full node")
+      }
     }
 
     //Show the spinny image when an Ajax call starts

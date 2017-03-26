@@ -11,6 +11,11 @@ scalaVersion := "2.11.8"
 
 gruntSettings
 
+unmanagedJars in Compile <++= baseDirectory map { base =>
+    val libs = base / "lib"
+    (libs ** "*.jar").classpath
+}
+
 resolvers ++= Seq("snapshots"     at "http://oss.sonatype.org/content/repositories/snapshots",
                   "staging"       at "http://oss.sonatype.org/content/repositories/staging",
                   "releases"      at "http://oss.sonatype.org/content/repositories/releases",
@@ -62,7 +67,8 @@ libraryDependencies ++= {
         "io.github.cloudify"      %% "spdf"                   % "1.4.0",
         "com.lambdaworks"         % "scrypt"                  % "1.4.0",
         "org.yaml"                % "snakeyaml"               % "1.18",
-        "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test"
+        "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test",
+        "org.scalaj"              %% "scalaj-http"            % "2.3.0"
     )
 }
 

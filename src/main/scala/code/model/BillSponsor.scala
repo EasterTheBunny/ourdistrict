@@ -25,11 +25,17 @@ import net.liftweb.http._
 
 class BillSponsor extends LongKeyedMapper[BillSponsor] with IdPK {
   def getSingleton = BillSponsor
-  object bill extends MappedLongForeignKey(this, Bill)
-  object sponsor extends MappedLongForeignKey(this, Sponsor)
+  object bill extends MappedLongForeignKey(this, Bill) {
+    override def dbIndexed_? = true
+  }
+  object sponsor extends MappedLongForeignKey(this, Sponsor) {
+    override def dbIndexed_? = true
+  }
   object sponsor_at extends MappedDate(this)
   object withdrawn_at extends MappedDate(this)
-  object sponsorship extends MappedString(this, 25)
+  object sponsorship extends MappedString(this, 25) {
+    override def dbIndexed_? = true
+  }
   object bill_type extends MappedString(this, 10)
   object congress extends MappedInt(this)
 }

@@ -1,1 +1,2 @@
-production.*
+*.default.props
+*.local.props
