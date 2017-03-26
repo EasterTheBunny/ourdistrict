@@ -27,9 +27,7 @@
 		scrollPos = $(document).scrollTop()
 		nav_height = $('#navbar').outerHeight()
 
-
 	$("document").ready ->
 		$('.parallax').parallax()
-
-	
+    
 ) jQuery

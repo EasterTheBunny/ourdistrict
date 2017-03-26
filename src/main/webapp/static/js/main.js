@@ -11,7 +11,9 @@
     scrollPos = $(document).scrollTop();
     return nav_height = $('#navbar').outerHeight();
   });
+
   return $("document").ready(function() {
     return $('.parallax').parallax();
   });
+
 })(jQuery);
