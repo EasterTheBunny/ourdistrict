@@ -145,11 +145,9 @@ class Boot {
 
     Props.get("settings.fullnode") match {
       case Full(opt) if(opt == "true") => {
-        //JXTATest ! JXTATest.StartClient
         //ParseBillsToDB ! ParseBillsToDB.ParseBills
         ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
 
-        //LiftRules.unloadHooks.append( () => JXTATest ! JXTATest.Stop )
         LiftRules.unloadHooks.append( () => ParseBillsToDB ! ParseBillsToDB.Stop )
         LiftRules.unloadHooks.append( () => ParseLegislatorsToDB ! ParseLegislatorsToDB.Stop )
       }

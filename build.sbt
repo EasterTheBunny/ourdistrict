@@ -13,7 +13,6 @@ gruntSettings
 
 unmanagedJars in Compile <++= baseDirectory map { base =>
     val libs = base / "lib"
-    //val dirs = (libs / "batik") +++ (libs / "libtw") +++ (libs / "kiama")
     (libs ** "*.jar").classpath
 }
 
@@ -69,9 +68,7 @@ libraryDependencies ++= {
         "com.lambdaworks"         % "scrypt"                  % "1.4.0",
         "org.yaml"                % "snakeyaml"               % "1.18",
         "org.scalacheck"          %% "scalacheck"             % "1.13.4"            % "test",
-        "org.scalaj"              %% "scalaj-http"            % "2.3.0",
-        "com.kenai.jxse"          % "jxse"                    % "2.7"
-
+        "org.scalaj"              %% "scalaj-http"            % "2.3.0"
     )
 }
 
