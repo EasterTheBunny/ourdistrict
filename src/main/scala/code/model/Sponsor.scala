@@ -31,14 +31,14 @@ class Sponsor extends LongKeyedMapper[Sponsor] with IdPK {
   object thomas_id extends MappedString(this, 15) {
     override def dbIndexed_? = true
   }
-  object title extends MappedString(this, 10)
+  object title extends MappedString(this, 30)
   object sponsor_type extends MappedString(this, 25)
   
   object last_name extends MappedString(this, 255)
   object first_name extends MappedString(this, 255)
   object birthday extends MappedDate(this)
   object gender extends MappedGender(this)
-  object `type` extends MappedString(this, 10)
+  object `type` extends MappedString(this, 30)
   object party extends MappedString(this, 100)
   object url extends MappedString(this, 255)
   object address extends MappedString(this, 255)

@@ -6,3 +6,4 @@ settings.congress=115
 settings.fullnode=false
 scraper.data=/path/to/scraped/data/congress
 scraper.skipInitOnBoot=true
+scraper.legislators=/path/to/scraped/data/congress.yaml

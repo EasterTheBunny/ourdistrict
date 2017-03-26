@@ -35,9 +35,7 @@ import net.liftweb.json.JsonAST._
 
 object JsonUserSortedListHandler extends RestHelper {
   def toJSON (n: List[SortedTopic]): JValue = {
-    n.map(t => {
-      (("label" -> t.title.get))
-    })
+    n.map( t => "label" -> t.title.get )
   }
   
   serve( "json" / "sortedlist" prefix {
@@ -52,14 +50,14 @@ object JsonUserSortedListHandler extends RestHelper {
       for{
         term <- S.param("term") ?~ "term parameter missing" ~> 400
       } yield {
-        var out: JValue = ("status" -> "success")
+        var out: JValue = "status" -> "success"
         
         try{
           val newTopic = SortedTopic.findOrCreateTopic(term)
           newTopic.writeins(newTopic.writeins.get + 1).save
           out = ("status" -> "success") ~ ("value" -> newTopic.hash.get)
         } catch {
-          case _: Throwable => out = ("status" -> "internal server error")
+          case _: Throwable => out = "status" -> "internal server error"
         }
         
         out

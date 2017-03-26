@@ -105,10 +105,10 @@ class Boot {
     DB.defineConnectionManager(DefaultConnectionIdentifier, PrimaryDBVender)
     DB.addLogFunc {
       case (log, duration) => {
-        println("Total query time : %d ms".format(duration))
+        //println("Total query time : %d ms".format(duration))
         log.allEntries.foreach {
           case DBLogEntry(stmt, duration) =>
-            println("  %s in %d ms".format(stmt, duration))
+            //println("  %s in %d ms".format(stmt, duration))
         }
       }
     }
@@ -146,12 +146,12 @@ class Boot {
     Props.get("settings.fullnode") match {
       case Full(opt) if(opt == "true") => {
         //JXTATest ! JXTATest.StartClient
-        ParseBillsToDB ! ParseBillsToDB.ParseBills
-        //ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
+        //ParseBillsToDB ! ParseBillsToDB.ParseBills
+        ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
 
         //LiftRules.unloadHooks.append( () => JXTATest ! JXTATest.Stop )
         LiftRules.unloadHooks.append( () => ParseBillsToDB ! ParseBillsToDB.Stop )
-        //LiftRules.unloadHooks.append( () => ParseLegislatorsToDB ! ParseLegislatorsToDB.Stop )
+        LiftRules.unloadHooks.append( () => ParseLegislatorsToDB ! ParseLegislatorsToDB.Stop )
       }
       case _ => {
         println("You have opted to NOT run a full node")
