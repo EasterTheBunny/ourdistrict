@@ -1,7 +1,7 @@
-db.driver=org.postgresql.Driver
-db.url=jdbc:postgresql://localhost:5432/political
-db.user=webapp
-db.password=password
+db.driver=
+db.url=
+db.user=
+db.password=
 settings.congress=115
 settings.fullnode=false
 scraper.data=/path/to/scraped/data/congress
