@@ -121,3 +121,29 @@ Logging is handled by logback so reference that documentation for setup rules. A
 ```
 The same naming that applied to properties also applies to the logback setup file. Copy the file and name it with
 your hostname prepending what it currently is.
+
+
+## Full Node
+-----------------
+
+#### What is a 'full node'?
+This application provides a few modules that obtain data regarding legislators, bills, votes, and much more.
+However, to use this feature you must install other scripts not included in this project that scrape the
+necessary data sources for this information and structures it in a way that this application is designed to
+consume. If you would like to use this feature, reference the links below first:
+
+[Congress Legislators (original)](https://github.com/unitedstates/congress-legislators)
+
+[Congress Legislators (fork)](https://github.com/EasterTheBunny/congress-legislators)
+
+[Congress (original)](https://github.com/unitedstates/congress)
+
+[Congress (fork)](https://github.com/EasterTheBunny/congress)
+
+This application was tested using the forked versions of these tools. To turn this feature on, apply the
+applicable settings in the properties file.
+
+#### What if I don't want to run a 'full node'?
+Currently the only option is to download these files manually. It's in the plan to make a peer to peer resource
+network where a full node would serve the scraped data and a client node could consume and serve them. If you
+know how to do this, feel free to get started.
