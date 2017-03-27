@@ -84,7 +84,9 @@ class Node extends LongKeyedMapper[Node] with IdPK {
     upvotes.remove(user.id.get.toString).save
     downvotes.add(user.id.get.toString).save
   }
-  
+
+  var children: List[Node] = Nil
+
 }
 
 object Node extends Node with LongKeyedMetaMapper[Node] {

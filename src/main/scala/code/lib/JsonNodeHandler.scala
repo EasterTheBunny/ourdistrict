@@ -38,7 +38,7 @@ import org.joda.time.format.DateTimeFormat
 object JsonNodeHandler extends RestHelper {
   
   def toJSON (n: Node): JValue = {
-    ("node" ->
+    /*"node" ->*/
     	("statement" -> n.statement.get) ~
     	("details" -> n.details.get) ~
     	("vote" -> n.vote.get) ~
@@ -47,42 +47,33 @@ object JsonNodeHandler extends RestHelper {
     	("parent" -> n.parentHash.get) ~
     	("version" -> n.version.get) ~
     	("id" -> n.hash.get) ~
-    	("user" -> n.creator.obj.map(_.username.get).openOr("unknown")))
+    	("user" -> n.creator.obj.map(_.username.get).openOr("unknown")) ~
+      ("children" -> n.children.map(toJSON(_)))
   }
-  
+
   def toJSON (n: List[Node]): JValue = {
-    n.map(m => {
-    	  (("statement" -> m.statement.get) ~
-    	  ("details" -> m.details.get) ~
-    	  ("vote" -> m.vote.get) ~
-    	  ("uservote" -> m.voteForCurrentUser_?) ~
-    	  ("date" -> DateTimeFormat.forPattern("MMMM e, yyyy HH:mm:ss").print(new DateTime(m.dateCreated.get))) ~
-    	  ("parent" -> m.parentHash.get) ~
-    	  ("version" -> m.version.get) ~
-    	  ("id" -> m.hash.get) ~
-    	  ("user" -> m.creator.obj.map(_.username.get).openOr("unknown")))
-    	})
+    n.map(toJSON(_))
   }
   
   def toCommentJSON (c: Comment): JValue = {
-    ("comment" ->
+    "comment" ->
       ("id" -> c.hash.get) ~
       ("parent" -> c.parentHash.get) ~
       ("vote" -> c.vote.get) ~
       ("text" -> c.text.get) ~
       ("uservote" -> c.voteForCurrentUser_?) ~
-      ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")))
+      ("user" -> c.creator.obj.map(_.username.get).openOr("unknown"))
     
   }
   
   def toCommentJSON (c: List[Comment]): JValue = {
     c.map(comment => {
-      (("id" -> comment.hash.get) ~
+      ("id" -> comment.hash.get) ~
        ("parent" -> comment.parentHash.get) ~
        ("vote" -> comment.vote.get) ~
        ("text" -> comment.text.get) ~
        ("uservote" -> comment.voteForCurrentUser_?) ~
-       ("user" -> comment.creator.obj.map(_.username.get).openOr("unknown")))
+       ("user" -> comment.creator.obj.map(_.username.get).openOr("unknown"))
     })
   }
   
@@ -177,8 +168,32 @@ object JsonNodeHandler extends RestHelper {
         val totalNodeVotes = topic.nodes.map(_.vote.get).foldLeft(0)((b, a) => {
           a + b
         })
+        // is this saving data to the db EVERY time it is accessed????
+        // what was I thinking???!!?
         topic.nodeVoteTotal(totalNodeVotes).save
-        toJSON(topic.nodes)
+
+        /**
+          * we need to structure this as a nested tree for easy consumption
+          * the client side
+          */
+        val nodes = topic.nodes
+
+        // set the hash lookup
+        val lookup = nodes.foldLeft(Map[String, Node]())((mp, li) => {
+          mp + (li.hash.get -> li)
+        })
+
+        // collapse the nodes
+        var roots: List[Node] = Nil
+        nodes.foreach(li => {
+          if(lookup.contains(li.parentHash.get)) {
+            lookup(li.parentHash.get) children = lookup(li.parentHash.get).children :+ li
+          }
+
+          if(li.parentHash.get == "root") roots = roots :+ li
+        })
+
+        toJSON(roots)
       }
     
     case "json" :: "node" :: nodeHash :: Nil JsonGet _ => 
