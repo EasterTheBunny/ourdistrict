@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <title>Topic Explorer</title>
+</head>
+<body class="lift:content_id=main">
+<div id="main" class="lift:surround?with=minimal;at=content">
+    <head_merge>
+        <link rel="stylesheet" type="text/css" href="/static/css/jquery.pagewalkthrough.min.css" />
+        <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="/static/js/jquery.pagewalkthrough.min.js"></script>
+        <script src="//d3js.org/d3.v3.min.js"></script>
+        <!-- <script type="text/javascript" src="/static/js/tree_setup.min.js"></script> -->
+        <style type="text/css">
+            body {
+                font-size: 14px;
+            }
+
+            .btn {
+                font-size: 12px;
+                padding: 6px 9px;
+            }
+
+            /* tree display */
+                .node {
+                cursor: pointer;
+            }
+
+            .node circle {
+                fill: #fff;
+                stroke: steelblue;
+                stroke-width: 1.5px;
+            }
+
+            .node text {
+                font: 10px sans-serif;
+            }
+
+            .node.temp circle {
+                stroke: red;
+            }
+
+            .link {
+                fill: none;
+                stroke: #ccc;
+                stroke-width: 1.5px;
+            }
+
+            .link.selected {
+                stroke: #999;
+                stroke-width: 2.0px;
+            }
+        </style>
+    </head_merge>
+    <div class="lift:DocumentPage container-fluid" style="margin-top:65px;background-color:#ededed">
+        <div class="row">
+            <div class="col-md-12" style="border:thin solid white" id="frame-outer">
+                <div id="bill_section">
+
+                    <div class="jumbotron">
+                        <h1 name="headline">This bill is available.</h1>
+                        <p name="headline_text">
+                            To view the text of this bill, initialize it into our editing zone.<br/>From there, you can edit
+                            the text on your own and send the results to whomever you like.
+                        </p>
+                        <p name="init_btn"><a class="btn btn-primary btn-lg" href="#" role="button" name="init_bill">Initialize</a></p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

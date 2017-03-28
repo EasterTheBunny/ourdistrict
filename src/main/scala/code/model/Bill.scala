@@ -29,7 +29,9 @@ import JsonParser._
 class Bill extends LongKeyedMapper[Bill] with IdPK {
   def getSingleton = Bill
   object introduced_at extends MappedDate(this)
-  object bill_id extends MappedString(this, 25)
+  object bill_id extends MappedString(this, 25) {
+    override def dbIndexed_? = true
+  }
   object bill_type extends MappedString(this, 10)
   object by_request extends MappedBoolean(this)
   object congress extends MappedInt(this) {
@@ -92,9 +94,11 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: List[Title] = read[List[Title]](get)
   }
-  object amendments extends MappedString(this, 100000) {
-    
+  object amendments extends MappedString(this, 100000)
+  object initialized extends MappedBoolean(this) {
+    override def defaultValue: Boolean = false
   }
+
   
   def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "sponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
   def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "cosponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
