@@ -20,14 +20,6 @@ package model
 
 import net.liftweb.common._
 import net.liftweb.mapper._
-import net.liftweb.util._
-import net.liftweb.json._
-
-import code.mapper.MappedList
-
-import org.joda.time.DateTime
-import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.format.DateTimeFormatter
 
 import com.roundeights.hasher.Implicits._
 
@@ -55,19 +47,26 @@ object BillSection extends BillSection with LongKeyedMetaMapper[BillSection] {
 
   override def unapply(a: Any): Option[BillSection] = BillSection.find(By(BillSection.hash, a.toString))
 
-  def add(bill_id: String, parent: BillSection): Node = {
+  def add(bill_id: String, parent: Option[BillSection]): Box[BillSection] = {
     for {
       user <- User.currentUser
-      bill = Bill.find(By(Bill.bill_id, bill_id))
+      bill <- Bill.find(By(Bill.bill_id, bill_id))
     } yield {
-      val newSection = BillSection.create.parent(parent).dateCreated(new java.util.Date())
+      val newSection = BillSection.create.dateCreated(new java.util.Date())
                                     .creator(user).bill(bill)
       newSection.save
 
       val hash = (newSection.id.get + newSection.dateCreated.get.toString).crc32
 
-      newSection.hash(hash).save
-      newSection
+      newSection.hash(hash)
+      parent match {
+        case Some(p) => newSection.parent(p)
+        case _ => newSection.parent(newSection)
+      }
+      newSection.save
+      Full(newSection)
     }
+
+    Empty
   }
 }

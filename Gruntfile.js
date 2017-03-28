@@ -18,11 +18,6 @@ module.exports = function(grunt) {
 			dist: {
 				files: [{
 					expand: true,
-					cwd: '<%= config.app %>/konva',
-					src: 'konva.min.js',
-					dest: '<%= config.dist %>/js'
-				},{
-					expand: true,
 					cwd: '<%= config.app %>/beemuse/dist',
 					src: 'beemuse.min.css',
 					dest: '<%= config.dist %>/css'
@@ -86,7 +81,22 @@ module.exports = function(grunt) {
 					cwd: '<%= config.app %>/ionicons/css',
 					src: 'ionicons.min.css',
 					dest: '<%= config.dist %>/css'
-				}]
+				},{
+                    expand: true,
+                    cwd: '<%= config.app %>/d3',
+                    src: 'd3.min.js',
+                    dest: '<%= config.dist %>/js'
+                },{
+                    expand: true,
+                    cwd: '<%= config.app %>/owl.carousel/dist',
+                    src: '*.min.js',
+                    dest: '<%= config.dist %>/js'
+                },{
+                    expand: true,
+                    cwd: '<%= config.app %>/owl.carousel/dist/assets',
+                    src: ['owl.carousel.min.css', '*.default.min.css'],
+                    dest: '<%= config.dist %>/css'
+                }]
 			}
 		},
 		/*concat: {

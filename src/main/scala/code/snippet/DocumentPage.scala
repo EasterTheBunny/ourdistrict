@@ -59,14 +59,14 @@ class DocumentPage(bill_maybe: Box[Bill]) {
 
 
 
-        //bill.initialized(true).save
+        bill.initialized(true).save
+        S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
       }
     }
 
     bill_maybe match {
       case Full(bill) if bill.initialized.get => {
-        "#bill_section" #> bill.bill_id.get &
-          "@bill-details" #> bill.official_title.get
+        "#bill_section" #> S.runTemplate("templates-hidden" :: "_documentCarousel" :: Nil)
       }
       case Full(bill) => {
         "@init_bill [href]" #> (DocumentPage.menu.calcHref(Full(bill)) + "?initialize")
