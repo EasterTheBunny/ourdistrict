@@ -10,16 +10,45 @@
 <body class="lift:content_id=carousel">
 
     <!-- Footer -->
-    <footer id="carousel">
-        <div class='container' >
-            <div class='row' >
-                <div class="col-sm-12">
-
-
-
-                </div>
-            </div>
+    <div id="carousel">
+        <div class="controls">
+            <a class="btn btn-success" id="move">Move</a>
+            <a class="btn btn-success" id="text" style="display:none;">Full Text</a>
         </div>
-    </footer>
+
+        <div class="owl-carousel">
+            <div> Your Content </div>
+            <div> Your Content1 </div>
+        </div>
+
+        <script type="text/javascript">
+            function setCarouselHeight() {
+                var height = $(window).height() - 273;
+                $("body").prepend("<style>.owl-item.active { overflow: auto; height:" + height + "px; }</style>");
+            }
+
+            $(document).ready(function(){
+                $(".owl-carousel").owlCarousel({
+                    items: 1,
+                    mouseDrag: false,
+                    touchDrag: false,
+                    pullDrag: false,
+                    dots: false
+                });
+
+                $("#move").on("click", function(){
+                    $("#text").show();
+                    $(".owl-carousel").trigger("to.owl.carousel", [1, 250]);
+                });
+
+                $("#text").on("click", function(){
+                    $(this).hide();
+                    $(".owl-carousel").trigger("to.owl.carousel", [0, 250]);
+                });
+
+                setCarouselHeight();
+            });
+        </script>
+    </div>
 
 </body>

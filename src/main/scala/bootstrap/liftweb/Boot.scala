@@ -117,7 +117,8 @@ class Boot {
     // you don't need to use Mapper to use Lift... use
     // any ORM you want
     Schemifier.schemify(true, Schemifier.infoF _, User, Node, Topic, Comment, Soapbox, Bill, BillSponsor,
-    							Committee, CommitteeBill, CommitteeTopic, CommitteeUser, Sponsor, Action, Visualization, SortedTopic, SortedTopicCookie)
+    							Committee, CommitteeBill, CommitteeTopic, CommitteeUser, Sponsor, Action, Visualization,
+                  SortedTopic, SortedTopicCookie, BillLayer)
 
     // where to search snippet
     LiftRules.addToPackages("code")

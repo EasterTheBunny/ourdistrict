@@ -23,50 +23,38 @@ import net.liftweb.mapper._
 
 import com.roundeights.hasher.Implicits._
 
-class BillSection extends LongKeyedMapper[BillSection] with IdPK {
-  def getSingleton = BillSection
+class BillLayer extends LongKeyedMapper[BillLayer] with IdPK {
+  def getSingleton = BillLayer
 
   object dateCreated extends MappedDateTime(this)
   object hash extends MappedString(this, 64)
+  object layer_type extends MappedString(this, 100)
+  object enum extends MappedString(this, 100)
+  object header extends MappedText(this)
+  object header_raw extends MappedText(this)
+  object text extends MappedText(this)
+  object text_raw extends MappedText(this)
+  object proviso extends MappedText(this)
+  object proviso_raw extends MappedText(this)
+  object layer_raw extends MappedText(this)
+  object quoted extends MappedBoolean(this)
+  object table_of_contents extends MappedText(this)
   object creator extends MappedLongForeignKey(this, User) {
     override def dbIndexed_? = true
   }
-  object parent extends MappedLongForeignKey(this, BillSection) {
+  object parent extends MappedLongForeignKey(this, BillLayer) {
     override def dbIndexed_? = true
   }
   object bill extends MappedLongForeignKey(this, Bill) {
     override def dbIndexed_? = true
   }
 
-  var children: List[BillSection] = Nil
+  var children: List[BillLayer] = Nil
 
 }
 
-object BillSection extends BillSection with LongKeyedMetaMapper[BillSection] {
-  override def dbTableName = "billsection"
+object BillLayer extends BillLayer with LongKeyedMetaMapper[BillLayer] {
+  override def dbTableName = "billlayer"
 
-  override def unapply(a: Any): Option[BillSection] = BillSection.find(By(BillSection.hash, a.toString))
-
-  def add(bill_id: String, parent: Option[BillSection]): Box[BillSection] = {
-    for {
-      user <- User.currentUser
-      bill <- Bill.find(By(Bill.bill_id, bill_id))
-    } yield {
-      val newSection = BillSection.create.dateCreated(new java.util.Date())
-                                    .creator(user).bill(bill)
-      newSection.save
-
-      val hash = (newSection.id.get + newSection.dateCreated.get.toString).crc32
-
-      newSection.hash(hash)
-      parent match {
-        case Some(p) => newSection.parent(p)
-        case _ => newSection.parent(newSection)
-      }
-      newSection.save
-      Full(newSection)
-    }
-
-    Empty
-  }
+  override def unapply(a: Any): Option[BillLayer] = BillLayer.find(By(BillLayer.hash, a.toString))
 }

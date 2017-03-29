@@ -18,6 +18,9 @@
 package code
 package snippet
 
+import java.io.File
+import java.text.SimpleDateFormat
+
 import net.liftweb._
 import common._
 import util._
@@ -25,11 +28,34 @@ import Helpers._
 import http._
 import sitemap._
 
-import scala.xml.Text
+import scala.xml.{Text,NodeSeq,Node}
+import scala.io.Source
 import code.model._
+import net.liftweb.json.DefaultFormats
+import net.liftweb.json.Serialization.read
 import net.liftweb.mapper.By
 
-object DocumentPage {
+case class BillMeta(bill_version_id: String,
+                    issued_on: String,
+                    urls: BillURLs,
+                    version_code: String)
+
+case class BillURLs(html: String,
+                    pdf: String,
+                    unknown: String,
+                    xml: String)
+
+case class LastMod(xml: java.util.Date,
+                   pdf: java.util.Date,
+                   mods: java.util.Date,
+                   text: java.util.Date)
+
+object DocumentPage extends Loggable {
+
+  implicit val formats = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss-SSS'Z'")
+  }
+
   def searchByBillId(id: String): Box[Box[Bill]] = {
     try{
       Full(Bill.find(By(Bill.bill_id, id)))
@@ -38,26 +64,199 @@ object DocumentPage {
     }
   }
 
+  def mostRecentBillMetaData(bill: Bill): Option[BillMeta] = {
+    Props.get("scraper.data") match {
+      case Full(base) => {
+        val congress = bill.congress.get
+        val billtype = bill.bill_type.get
+        val billnum = bill.bill_id.get
+
+        val dir = base :: congress :: "bills" :: billtype :: billnum :: "text-versions" :: Nil
+
+        val lastModDir = (new File(dir.mkString("/"))).listFiles.filter(_.isDirectory).toList
+            .map(actionDir => {
+              val listOfFiles = actionDir.listFiles
+
+              listOfFiles.find(f => f.getName == "lastmod.json" ) match {
+                case Some(modfile) => {
+                  val source = scala.io.Source.fromFile(modfile)
+                  val lines = source.getLines mkString "\n"
+                  source.close
+
+                  (actionDir, Some(read[LastMod](lines)))
+                }
+                case _ => (actionDir, None)
+              }
+            }).filter(_._2.isDefined)
+            .sortWith((a, b) => {
+              a._2.map(_.xml).getOrElse(new java.util.Date(42))
+                .after(b._2.map(_.xml).getOrElse(new java.util.Date(42)))
+            }).headOption
+
+        for {
+          dir <- lastModDir
+          datafile <- dir._1.listFiles.find(f => f.getName == "data.json")
+        } yield {
+          val source = scala.io.Source.fromFile(datafile)
+          val lines = source.getLines mkString "\n"
+          source.close
+
+          read[BillMeta](lines)
+        }
+      }
+      case _ => {
+        logger.info("scraper data directory missing from config")
+        None
+      }
+    }
+  }
+
+  // data extraction direct to value
+  val nodesToExtract = "text" :: "enum" :: "header" :: "continuation-text" :: Nil
+
+  // data that is not structured yet
+  val nodesToStore = "graphic" :: "formula" :: "toc" :: "list" :: "table" :: Nil
+
+  // data that is traversable
+  val nodesToTraverse = "account" :: "subaccount" :: "subsubaccount" :: "subsubsubaccount" :: "title" :: "subtitle" ::
+                        "part" :: "subpart" :: "chapter" :: "subchapter" :: "division" :: "subdivision" :: "section" ::
+                        "subsection" :: "paragraph" :: "subparagraph" :: "clause" :: "subclause" :: "item" ::
+                        "subitem" :: "appropriations–para" :: Nil
+
+  /**
+    * ((account | appropriations–para | chapter | subdivision | division | subsection | paragraph | subparagraph | clause | subclause |
+    *     item | subitem | part | section | subaccount | subchapter | subpart | subsubaccount | subsubsubaccount | subtitle | title |
+    *     quoted–block | graphic | formula | toc | table | list | header | constitution–article | text)+, after–quoted–block)
+    *   quoted-block
+    *
+    * (header, subheader*, appropriations–para*, (subaccount > subsubaccount > subsubsubaccount | section)*)
+    *   account
+    *
+    * ((enum, header?, toc?), section*, ((subtitle | chapter | part)* | (account | subaccount)*)?)
+    *   title
+    *
+    * ((enum, header?, toc?), section*, (chapter | part)*)
+    *   subtitle
+    *
+    * ((enum, header?, toc?), section*, (subpart | chapter)*)
+    *   part
+    *
+    * ((enum, header?, toc?), section*, (chapter)*)
+    *   suppart
+    *
+    * ((enum, header?, toc?), section*, (subchapter | part)*)
+    *   chapter
+    *
+    * ((enum, header?, toc?), section*, (part)*)
+    *   subchapter
+    *
+    * ((enum, header?, toc?), section*, (subdivision | title)*)
+    *   division
+    *
+    * ((enum, header?, toc?), section*, title*)
+    *   subdivision
+    *
+    * (enum?, header?, (text | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (subsection* | paragraph* | committee–appointment–paragraph*), continuation–text?)
+    *   section
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (paragraph | continuation–text)*)
+    *   subsection
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (subparagraph | continuation–text)*)
+    *   paragraph
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (clause | continuation–text)*)
+    *   subparagraph
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (subclause | continuation–text)*)
+    *   clause
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (item | continuation–text)*)
+    *   subclause
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (subitem | continuation–text)*)
+    *   item
+    *
+    * (enum, header?, (text? | appropriations–para*)?, (quoted–block | graphic | formula | toc | table | list)*, (subitem | continuation–text)*)
+    *   subitem
+    *
+    * image-data
+    *   graphic
+    *
+    * graphic
+    *   formula
+    *
+    * ((header?, instructive–para?), ((toc–entry | toc–quoted–entry)+ | (multi–column–toc–entry | multi–column–toc–quoted–entry)+))+
+    *   toc
+    *
+    * (ttitle*, tdesc*, tgroup+)
+    *   table
+    *
+    * (list–item+)
+    *   list
+    *
+    * (enum, section+)
+    *   constitution-article
+    *
+    * appropriations–para:
+    *   (text, proviso*)
+    *
+    */
+
   def menu = Menu.param[Box[Bill]]("Document",
                         Loc.LinkText(bill => Text(bill.map(_.bill_id.get).openOr("Init Document"))),
                         searchByBillId _,
                         _.map(_.bill_id.get).openOr("init_document")) / "document" / *
 }
 
-class DocumentPage(bill_maybe: Box[Bill]) {
+class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
+  private def processBillLayer(bill: Bill, layer: Node, parent: Option[BillLayer], quoted: Boolean = false): Unit = {
+    val label = layer.label
+    val to_quote = layer.label == "quoted-block" || quoted
+    val need_to_store = DocumentPage.nodesToStore.contains(label)
+
+    val db_layer = BillLayer.create.hash(layer \ "@id" openOr md5(nextFuncName))
+
+    db_layer.creator(User.currentUser)
+    db_layer.parent(parent)
+    db_layer.layer_type(label)
+    db_layer.dateCreated(new java.util.Date())
+    db_layer.quoted(quoted)
+    db_layer.bill(bill)
+
+    layer \ "enum" map( e => db_layer.enum(e.text) )
+    layer \ "header" map( h => db_layer.header(h.text) )
+    db_layer.text(layer \ "text" map( _.text ) mkString """\\n""")
+    db_layer.proviso(layer \ "proviso" map( _.text ) mkString """\\n""")
+
+    if(need_to_store) db_layer.layer_raw(layer.toString)
+
+    db_layer.save
+
+    if(!need_to_store) {
+      layer.child.filter(n => {
+        DocumentPage.nodesToStore.contains(n.label) ||
+          DocumentPage.nodesToTraverse.contains(n.label)
+      }).foreach(n => processBillLayer(bill = bill, layer = n, parent = Some(db_layer), quoted = to_quote))
+    }
+  }
 
   def render = {
     for {
       init <- S.param("initialize")
       bill <- bill_maybe
+      meta <- DocumentPage.mostRecentBillMetaData(bill)
     } yield {
       if (!bill.initialized.get) {
         /**
           * read the source location, download the file, parse the data
           * and proceed with rendering
           */
+        val html = Source.fromURL(meta.urls.xml)
+        val billXML = xml.XML.loadString(html.mkString)
+        html.close
 
-
+        (billXML \ "bill" \ "legis-body").foreach( n => processBillLayer(bill = bill, layer = n, None, quoted = false) )
 
         bill.initialized(true).save
         S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
