@@ -38,7 +38,6 @@ class BillLayer extends LongKeyedMapper[BillLayer] with IdPK {
   object proviso_raw extends MappedText(this)
   object layer_raw extends MappedText(this)
   object quoted extends MappedBoolean(this)
-  object table_of_contents extends MappedText(this)
   object creator extends MappedLongForeignKey(this, User) {
     override def dbIndexed_? = true
   }

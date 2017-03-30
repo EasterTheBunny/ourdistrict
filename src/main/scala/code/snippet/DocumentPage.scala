@@ -35,6 +35,8 @@ import net.liftweb.json.DefaultFormats
 import net.liftweb.json.Serialization.read
 import net.liftweb.mapper.By
 
+import scalaj.http.{Http,HttpResponse}
+
 case class BillMeta(bill_version_id: String,
                     issued_on: String,
                     urls: BillURLs,
@@ -53,7 +55,7 @@ case class LastMod(xml: java.util.Date,
 object DocumentPage extends Loggable {
 
   implicit val formats = new DefaultFormats {
-    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss-SSS'Z'")
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
   }
 
   def searchByBillId(id: String): Box[Box[Bill]] = {
@@ -69,7 +71,7 @@ object DocumentPage extends Loggable {
       case Full(base) => {
         val congress = bill.congress.get
         val billtype = bill.bill_type.get
-        val billnum = bill.bill_id.get
+        val billnum = bill.bill_id.get replaceAll( "-"+congress, "" )
 
         val dir = base :: congress :: "bills" :: billtype :: billnum :: "text-versions" :: Nil
 
@@ -210,7 +212,7 @@ object DocumentPage extends Loggable {
 }
 
 class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
-  private def processBillLayer(bill: Bill, layer: Node, parent: Option[BillLayer], quoted: Boolean = false): Unit = {
+  private def processBillLayer(bill: Bill, layer: Node, parent: Box[BillLayer] = Empty, quoted: Boolean = false): Unit = {
     val label = layer.label
     val to_quote = layer.label == "quoted-block" || quoted
     val need_to_store = DocumentPage.nodesToStore.contains(label)
@@ -226,8 +228,11 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
 
     layer \ "enum" map( e => db_layer.enum(e.text) )
     layer \ "header" map( h => db_layer.header(h.text) )
+    layer \ "header" map( h => db_layer.header_raw(h.toString) )
     db_layer.text(layer \ "text" map( _.text ) mkString """\\n""")
+    db_layer.text_raw(layer \ "text" map( _.toString ) mkString """\\n""")
     db_layer.proviso(layer \ "proviso" map( _.text ) mkString """\\n""")
+    db_layer.proviso_raw(layer \ "proviso" map( _.toString ) mkString """\\n""")
 
     if(need_to_store) db_layer.layer_raw(layer.toString)
 
@@ -237,7 +242,7 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
       layer.child.filter(n => {
         DocumentPage.nodesToStore.contains(n.label) ||
           DocumentPage.nodesToTraverse.contains(n.label)
-      }).foreach(n => processBillLayer(bill = bill, layer = n, parent = Some(db_layer), quoted = to_quote))
+      }).foreach(n => processBillLayer(bill = bill, layer = n, parent = Full(db_layer), quoted = to_quote))
     }
   }
 
@@ -252,14 +257,26 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
           * read the source location, download the file, parse the data
           * and proceed with rendering
           */
-        val html = Source.fromURL(meta.urls.xml)
-        val billXML = xml.XML.loadString(html.mkString)
-        html.close
+        val response: HttpResponse[String] = Http(meta.urls.xml).asString
+        response.code match {
+          case 200 => {
+            val billXML = xml.XML.loadString(response.body)
 
-        (billXML \ "bill" \ "legis-body").foreach( n => processBillLayer(bill = bill, layer = n, None, quoted = false) )
+            // for bills
+            (billXML \\ "legis-body").foreach(bdy =>
+              bdy.child.foreach( n => processBillLayer(bill = bill, layer = n) ))
 
-        bill.initialized(true).save
-        S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
+            // for resolutions
+
+            // for amendments
+
+            bill.initialized(true).save
+            S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
+          }
+          case _ => logger.warn(meta.urls.xml + " failed with response code: " + response.code)
+        }
+
+        println("done processing")
       }
     }
 
