@@ -1,7 +1,6 @@
-$(document).ready(function(){
-    var topic = $("#frame").attr('topic');
+function setup_tree(bill, topic) {
     var margin = {top: 20, right: 120, bottom: 20, left: 120},
-        width = 960 - margin.right - margin.left,
+        width = $("#layer-tree").width() - margin.right - margin.left,
         height = 800 - margin.top - margin.bottom;
 
     var i = 0,
@@ -14,13 +13,13 @@ $(document).ready(function(){
     var diagonal = d3.svg.diagonal()
         .projection(function(d) { return [d.y, d.x]; });
 
-    var svg = d3.select("#frame").append("svg")
+    var svg = d3.select("#layer-tree").append("svg")
         .attr("width", width + margin.right + margin.left)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    d3.json("/json/topic/" + topic, function(error, flare) {
+    d3.json("/api/bill/" + bill + "/" + topic + "?q=nodes", function(error, flare) {
         if (error) throw error;
 
         if(flare.length > 0) {
@@ -41,9 +40,9 @@ $(document).ready(function(){
                 }
             }
 
-            root.children.forEach(collapse);
+            if(root.children) root.children.forEach(collapse);
             update(root);
-            setupNodeComments(root);
+            setupNodeInfo(root);
         }
     });
 
@@ -141,7 +140,7 @@ $(document).ready(function(){
 
     // Toggle children on click.
     function click(d) {
-        setupNodeComments(d);
+        setupNodeInfo(d);
 
         if(d.id != root.id) {
             if (d.children) {
@@ -166,9 +165,16 @@ $(document).ready(function(){
         } else return false;
     }
 
+    function setupNodeInfo( node ) {
+        $("#title").find("[name='header']").text(node.statement);
+        $("#title").find("[name='text']").text(node.details);
+
+        setupNodeComments(node);
+    }
+
     function setupNodeComments( node ) {
         $.ajax({
-            url: "/json/comments/" + topic + "/" + node.id + "/0",
+            url: "/api/bill/" + bill + "/" + topic + "/" + node.id + "?q=comments",
             dataType: "json"
         }).done(function(json){
             drawNodeComments( json );
@@ -180,7 +186,7 @@ $(document).ready(function(){
         container.empty();
 
         $.each(comments, function(index, value) {
-            newNodeComment( value );
+            newNodeComment( value, container );
 
             $('[data-toggle="tooltip"]').tooltip()
         });
@@ -188,7 +194,7 @@ $(document).ready(function(){
         $('.collapse.panel-body').collapse('show');
     }
 
-    function newNodeComment( comment ) {
+    function newNodeComment( comment, parent ) {
         // if parent exists in DOM, insert into parent
         // if children exist in the DOM, wrap them into element
 
@@ -202,7 +208,6 @@ $(document).ready(function(){
 
         var downvotefunc = $.proxy(function(event){
             var element = $(event.target);
-            var parent = element.parent().parent().parent();
             var id = parent.attr('id').split('-');
             var self = this;
             $.post("/json/vote/comment/" + id[2], "vote=down").done(function(data) {
@@ -221,7 +226,6 @@ $(document).ready(function(){
 
         var upvotefunc = $.proxy(function(event){
             var element = $(event.target);
-            var parent = element.parent().parent().parent();
             var id = parent.attr('id').split('-');
             var self = this;
             $.post("/json/vote/comment/" + id[2], "vote=up").done(function(data) {
@@ -264,17 +268,15 @@ $(document).ready(function(){
         var body = $('<div id="' + comment.id + '"></div>').addClass("panel-body collapse").append(comment.text);
         body.append(pull);
 
-        var container = "";
-
-        if($(".parent-id-" + comment.id).length > 0) body.append($(".parent-id-" + comment.id));
-        if($("#comment-id-" + comment.parent).length > 0) {
-            container = $("#comment-id-" + comment.parent);
-            var cnt = container.children('.panel-body');
-            if(cnt.length >= 1) container = cnt;
-        }
-        else container = $("#comment-id-root");
+        var container = parent;
 
         top.append(body);
         container.append(top);
+
+        if(comment.children && comment.children.length > 0) {
+            $.each(comment.children, function(index, value){
+                newNodeComment( value, body );
+            });
+        }
     }
-});
+};

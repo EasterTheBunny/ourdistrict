@@ -22,25 +22,23 @@ import net.liftweb.common._
 import net.liftweb.mapper._
 import net.liftweb.util._
 import net.liftweb.json._
-
+import Helpers._
 import code.mapper.MappedList
-
 import org.joda.time.DateTime
-import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.format.DateTimeFormatter
-
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import com.roundeights.hasher.Implicits._
+import net.liftweb.json.JsonAST.JValue
+import net.liftweb.json.JsonDSL._
 
-class Node extends LongKeyedMapper[Node] with IdPK {
-  def getSingleton = Node
-  
+class LayerNode extends LongKeyedMapper[LayerNode] with IdPK {
+  def getSingleton = LayerNode
+
   object statement extends MappedString(this, 500)
   object details extends MappedString(this, 2000)
   object dateCreated extends MappedDateTime(this)
   object vote extends MappedInt(this)
   object nodeID extends MappedInt(this)
   object hash extends MappedString(this, 64)
-  object version extends MappedInt(this)
   object upvotes extends MappedList(this) {
     override def defaultValue = "[]"
   }
@@ -49,88 +47,95 @@ class Node extends LongKeyedMapper[Node] with IdPK {
   }
   object commentCount extends MappedInt(this)
   object commentVoteTotal extends MappedInt(this)
-  object topic extends MappedLongForeignKey(this, Topic) {
+  object layer extends MappedLongForeignKey(this, BillLayer) {
     override def dbIndexed_? = true
   }
   object creator extends MappedLongForeignKey(this, User) {
     override def dbIndexed_? = true
   }
-  object parent extends MappedInt(this) {
+  object parent extends MappedLongForeignKey(this, LayerNode) {
     override def dbIndexed_? = true
   }
   object parentHash extends MappedString(this, 64)
-  
+
   def comments: List[Comment] = {
     Comment.findAll(By(Comment.node, this.id.get))
   }
-  
+
   def voteForCurrentUser_?(): Int = {
     User.currentUser match {
-      case Full(user) => 
-      	if(upvotes.asList.contains(user.id.get.toString)) 1
-      	else if(downvotes.asList.contains(user.id.get.toString)) -1
-      	else 0
-      
+      case Full(user) =>
+        if(upvotes.asList.contains(user.id.get.toString)) 1
+        else if(downvotes.asList.contains(user.id.get.toString)) -1
+        else 0
+
       case _ => 0
     }
   }
-  
+
   def voteUpForUser(user: User) = {
     downvotes.remove(user.id.get.toString).save
     upvotes.add(user.id.get.toString).save
   }
-  
+
   def voteDownForUser(user: User) = {
     upvotes.remove(user.id.get.toString).save
     downvotes.add(user.id.get.toString).save
   }
 
-  var children: List[Node] = Nil
+  var children: List[LayerNode] = Nil
 
 }
 
-object Node extends Node with LongKeyedMetaMapper[Node] {
-  override def dbTableName = "node"
-    
-  override def unapply(a: Any): Option[Node] = Node.find(By(Node.hash, a.toString))
-    
-  def findById(id: Int): Box[Node] = {
+object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
+  override def dbTableName = "layernode"
+
+  override def unapply(a: Any): Option[LayerNode] = LayerNode.find(By(LayerNode.hash, a.toString))
+
+  def findById(id: Int): Box[LayerNode] = {
     for {
-      node <- Node.find(By(Node.nodeID, id)) ?~ "Node not found"
+      node <- LayerNode.find(By(LayerNode.nodeID, id)) ?~ "Node not found"
     } yield node
   }
-  
-  def add(statement: String, details: String, topicHash: String, parentHash: String): Node = {
+
+  def add(statement: String, details: String, layer: BillLayer, parent: Box[LayerNode]): LayerNode = {
+    val newnode = LayerNode.create.statement(statement).layer(layer)
+                            .dateCreated(new java.util.Date()).creator(User.currentUser)
+                            .details(details).vote(1)
+
     User.currentUser match {
-      case Full(user) => {
-        
-      }
-      case _ => Empty
+      case Full(u) => newnode.upvotes.add(u.id.get.toString)
+      case _ =>
     }
-    val topic = Topic.searchByHash(topicHash)
-    
-    val newnode = Node.create.statement(statement).topic(topic).parentHash(parentHash).dateCreated(new java.util.Date()).creator(User.currentUserLog).details(details).version(0).vote(1)
-    newnode.upvotes.add(User.currentUser.map(_.id.get.toString).openOrThrowException("")).save
-    topic.map(a => a.nodeCount(a.nodeCount.get + 1).save)
+
+    val hash = (nextFuncName + newnode.statement.get).crc32
+    newnode.hash(hash)
+
+    parent match {
+      case Full(p) => newnode.parent(p).parentHash(p.hash.get)
+      case _ => {
+        newnode.save
+        newnode.parent(newnode).parentHash(newnode.hash.get)
+      }
+    }
+
     newnode.save
-    val hash = (newnode.id.get.toString + newnode.statement.get).crc32
-    newnode.hash(hash).save
     newnode
   }
-  
-  def addVersion(statement: String, details: String, topicHash: String, nodeHash: String): Node = {
-    var parent = ""
-    var version = 0
-    val topic = Topic.searchByHash(topicHash)
-    
-    Node.findAll(By(Node.topic, topic), By(Node.hash, nodeHash)).map(nd => {
-      parent = nd.parentHash.get
-      if(nd.version.get > version) version = nd.version.get
-    })
-    val newnode = Node.create.statement(statement).topic(topic).parentHash(parent).dateCreated(new java.util.Date()).creator(User.currentUserLog).details(details).version(version + 1).vote(1).hash(nodeHash)
-    newnode.upvotes.add(User.currentUser.map(_.id.get.toString).openOrThrowException("")).save
-    topic.map(a => a.nodeCount(a.nodeCount.get + 1).save)
-    newnode.save
-    newnode
+
+  def toJSON (n: LayerNode): JValue = {
+    ("statement" -> n.statement.get) ~
+    ("details" -> n.details.get) ~
+    ("vote" -> n.vote.get) ~
+    ("uservote" -> n.voteForCurrentUser_?) ~
+    ("date" -> DateTimeFormat.forPattern("MMMM e, yyyy HH:mm:ss").print(new DateTime(n.dateCreated.get))) ~
+    ("parent" -> n.parentHash.get) ~
+    ("id" -> n.hash.get) ~
+    ("user" -> n.creator.obj.map(_.username.get).openOr("unknown")) ~
+    ("children" -> n.children.map(toJSON(_)))
+  }
+
+  def toJSON (n: List[LayerNode]): JValue = {
+    n.map(toJSON(_))
   }
 }

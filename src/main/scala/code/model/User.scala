@@ -93,7 +93,7 @@ object User extends User with MetaMegaProtoUser[User] with BootstrapMegaMetaProt
   }
 
   override def lostPasswordXhtml = {
-    (<form class="form-horizontal" role="form" action={ S.uri } method="post">
+    <form class="form-horizontal" role="form" action={ S.uri } method="post">
        <legend>{ resLostPasswordLegendEnterEmail }</legend>
        <div class="form-group">
          <label for="username" class="col-lg-3 control-label">{ resLostPasswordLabelUserName }</label>
@@ -106,11 +106,11 @@ object User extends User with MetaMegaProtoUser[User] with BootstrapMegaMetaProt
            <button type="submit" class="btn btn-primary">{ resLostPasswordSubmit }</button>
          </div>
        </div>
-     </form>)
+     </form>
   }
 
   override def changePasswordXhtml = {
-    (<form class="form-horizontal" role="form" method="post" action={ S.uri }>
+    <form class="form-horizontal" role="form" method="post" action={ S.uri }>
        <legend>{ resChangePasswordLegendChangePassword }</legend>
        <div class="form-group">
          <label for="oldpassword" class="col-lg-3 control-label">{ resChangePasswordLabelOldPassword }</label>
@@ -135,7 +135,7 @@ object User extends User with MetaMegaProtoUser[User] with BootstrapMegaMetaProt
            <input type="submit" class="btn btn-primary"/>
          </div>
        </div>
-     </form>)
+     </form>
   }
 
   override def edit = {
@@ -211,7 +211,7 @@ class User extends MegaProtoUser[User] {
     }
   }
   
-  object ipaccesses extends MappedList(this, 3000) {
+  object ipaccesses extends MappedList(this) {
     override def defaultValue = "[]"
   }
   object lastAccess extends MappedDateTime(this)

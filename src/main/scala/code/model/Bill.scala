@@ -20,11 +20,10 @@ package model
 
 import net.liftweb.common._
 import net.liftweb.mapper._
-import net.liftweb.util._
-import net.liftweb.http._
 import net.liftweb.json._
 import Serialization._
-import JsonParser._
+import net.liftweb.json.JsonAST.JValue
+import net.liftweb.json.JsonDSL._
 
 class Bill extends LongKeyedMapper[Bill] with IdPK {
   def getSingleton = Bill
@@ -98,6 +97,8 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   object initialized extends MappedBoolean(this) {
     override def defaultValue: Boolean = false
   }
+  object initFrom extends MappedString(this, 255)
+  object pdfLink extends MappedString(this, 255)
 
   
   def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "sponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
@@ -111,4 +112,19 @@ object Bill extends Bill with LongKeyedMetaMapper[Bill] {
   def billTimestampInfoForCongress(congress: Integer): List[Bill] =
     Bill.findAllFields(Seq[SelectableField](Bill.id, Bill.bill_type, Bill.bill_id, Bill.last_scrape),
                         By(Bill.congress, congress))
+
+  def toJSON (b: Bill): JValue = {
+    ("bill_id" -> b.bill_id.get) ~
+    ("congress" -> b.congress.get) ~
+    ("official_title" -> b.official_title.get) ~
+    ("popular_title" -> b.popular_title.get) ~
+    ("short_title" -> b.short_title.get) ~
+    ("summary" -> b.summary.get) ~
+    ("titles" -> b.titles.get) ~
+    ("pdf" -> b.pdfLink.get)
+  }
+
+  def toJSON (n: List[Bill]): JValue = {
+    n.map(toJSON(_))
+  }
 }

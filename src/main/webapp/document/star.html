@@ -14,7 +14,7 @@
         <script type="text/javascript" src="/static/js/jquery.pagewalkthrough.min.js"></script> -->
         <script type="text/javascript" src="/static/js/d3.min.js"></script>
         <script type="text/javascript" src="/static/js/owl.carousel.min.js"></script>
-        <!-- <script type="text/javascript" src="/static/js/tree_setup.min.js"></script> -->
+        <script type="text/javascript" src="/static/js/tree_setup.min.js"></script>
         <style type="text/css">
             body {
                 font-size: 14px;
@@ -57,6 +57,72 @@
 
             .controls {
                 margin-bottom: 10px;
+            }
+
+            #bill-text .quoted-block {
+                font-style: italic;
+            }
+
+            #bill-text .quoted-block:before {
+                content: "''";
+                display: block;
+            }
+
+            #bill-text .quoted-block:after {
+                content: "''";
+                display: block;
+            }
+
+            #bill-text .btn-set {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                opacity: .6;
+                display:none;
+            }
+
+            #bill-text .indent {
+                position: relative;
+                margin-left: 10px;
+            }
+
+            #bill-text .indent.active > .btn-set {
+                display: block;
+            }
+
+            .indent .header {
+                font-weight: bold;
+            }
+
+            .indent .enum {
+                margin-right: 10px;
+            }
+
+            .indent p.text {
+                font-size: 13px;
+                margin: 10px 0;
+                margin-left: 10px;
+            }
+
+            #tree-container {
+                position: relative;
+                background: transparent;
+            }
+
+            #layer-info {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 400px;
+            }
+
+            #layer-info .col-md-12 > div {
+                padding: 10px;
+            }
+
+            #layer-info .row {
+                margin-bottom: 5px;
+                background: #fff;
             }
         </style>
     </head_merge>

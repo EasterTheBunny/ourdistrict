@@ -12,20 +12,90 @@
     <!-- Footer -->
     <div id="carousel">
         <div class="controls">
-            <a class="btn btn-success" id="move">Move</a>
             <a class="btn btn-success" id="text" style="display:none;">Full Text</a>
         </div>
 
         <div class="owl-carousel">
-            <div> Your Content </div>
-            <div> Your Content1 </div>
+            <div class="row">
+                <div id="bill-text" class="col-md-8">
+                    <p class="lead" id="bill-title"></p>
+                </div>
+                <div id="bill-data" class="col-md-4"></div>
+            </div>
+            <div id="tree-container">
+                <div id="layer-tree"></div>
+                <div id="layer-info">
+                    <div class="row">
+                        <a class="btn btn-primary">Edit</a>
+                        <a class="btn btn-default">Share</a>
+                        <div class="col-md-12" id="title">
+                            <h4 name="header"></h4>
+                            <p name="text"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <a class="btn btn-primary">Comment</a>
+                        <div class="col-md-12" id="comments">
+                            <div id="comment-id-root"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script type="text/javascript">
+            var billID = "";
+
             function setCarouselHeight() {
                 var height = $(window).height() - 273;
                 $("body").prepend("<style>.owl-item.active { overflow: auto; height:" + height + "px; }</style>");
-            }
+            };
+
+            function addLayerToContainer(layer, parent) {
+                var newLayer = $("<div/>").addClass("indent").addClass(layer.type);
+                var head = $("<h5/>").addClass("header").text(layer.header);
+                var text = $("<p/>").addClass("text").text(layer.text);
+
+                var toAdd = [];
+
+                if(layer.header) head.prepend($("<span/>").addClass("enum").text(layer.enum));
+                else text.prepend($("<span/>").addClass("enum").text(layer.enum));
+
+                if(layer.header) toAdd.push(head);
+                if(layer.text) toAdd.push(text);
+
+                newLayer.append(toAdd).append(layerBtnSet(layer));
+
+                newLayer.on('mouseover', function(e){
+                    e.stopPropagation();
+                    $('.indent').removeClass('active');
+                    $(this).addClass("active");
+                });
+
+                parent.append(newLayer);
+
+                if(layer.children) {
+                    layer.children.map(function( obj ){
+                        addLayerToContainer( obj, newLayer );
+                    });
+                }
+            };
+
+            function layerBtnSet( layer ) {
+                var container = $('<div/>').addClass('btn-set');
+                var btn = $('<a class="btn btn-primary"><i class="glyphicon glyphicon-cog"></i></a>');
+
+                container.append([ btn ]);
+
+                btn.on('click', function(){
+                    $('#layer-tree').empty();
+                    $("#text").show();
+                    setup_tree(billID, layer.id);
+                    $('.owl-carousel').trigger('to.owl.carousel', [1, 250]);
+                });
+
+                return container;
+            };
 
             $(document).ready(function(){
                 $(".owl-carousel").owlCarousel({
@@ -47,6 +117,42 @@
                 });
 
                 setCarouselHeight();
+
+                var path = window.location.pathname;
+                var match = path.match(/.+\/(.+?)$/);
+
+                if(match.length > 1) {
+                    billID = match[1];
+
+                    var path = "/api/bill/" + billID + "?q=text";
+
+                    $.ajax({
+                        url: path,
+                        method: "GET",
+                        dataType: "json"
+                    }).done(function( data ){
+                        var container = $("#bill-text");
+
+                        data.map(function( obj ){
+                            addLayerToContainer( obj, container );
+                        });
+                    });
+
+                    $.ajax({
+                        url: "/api/bill/" + billID,
+                        method: "GET",
+                        dataType: "json"
+                    }).done(function( data ){
+                        var btn = $('<a class="btn btn-success" target="_blank" id="download">PDF Text</a>');
+                        btn.attr('href', data.pdf);
+
+                        $('#bill-title').text(data.official_title);
+
+
+                        $('#bill-data').append(btn);
+
+                    });
+                }
             });
         </script>
     </div>

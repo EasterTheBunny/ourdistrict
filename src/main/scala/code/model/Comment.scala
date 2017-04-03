@@ -37,10 +37,10 @@ class Comment extends LongKeyedMapper[Comment] with IdPK {
   object node extends MappedLongForeignKey(this, Node)
   object hash extends MappedString(this, 64)
   object vote extends MappedInt(this)
-  object upvotes extends MappedList(this, 3000) {
+  object upvotes extends MappedList(this) {
     override def defaultValue = "[]"
   }
-  object downvotes extends MappedList(this, 3000) {
+  object downvotes extends MappedList(this) {
     override def defaultValue = "[]"
   }
   object topic extends MappedLongForeignKey(this, Topic)

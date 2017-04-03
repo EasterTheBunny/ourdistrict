@@ -28,8 +28,7 @@ import Helpers._
 import http._
 import sitemap._
 
-import scala.xml.{Text,NodeSeq,Node}
-import scala.io.Source
+import scala.xml.{Text,Node,Elem}
 import code.model._
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.Serialization.read
@@ -123,7 +122,7 @@ object DocumentPage extends Loggable {
   val nodesToTraverse = "account" :: "subaccount" :: "subsubaccount" :: "subsubsubaccount" :: "title" :: "subtitle" ::
                         "part" :: "subpart" :: "chapter" :: "subchapter" :: "division" :: "subdivision" :: "section" ::
                         "subsection" :: "paragraph" :: "subparagraph" :: "clause" :: "subclause" :: "item" ::
-                        "subitem" :: "appropriations–para" :: Nil
+                        "subitem" :: "appropriations–para" :: "quoted-block" :: Nil
 
   /**
     * ((account | appropriations–para | chapter | subdivision | division | subsection | paragraph | subparagraph | clause | subclause |
@@ -270,7 +269,7 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
 
             // for amendments
 
-            bill.initialized(true).save
+            bill.initialized(true).initFrom(meta.urls.xml).pdfLink(meta.urls.pdf).save
             S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
           }
           case _ => logger.warn(meta.urls.xml + " failed with response code: " + response.code)
@@ -281,18 +280,26 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
     }
 
     bill_maybe match {
-      case Full(bill) if bill.initialized.get => {
-        "#bill_section" #> S.runTemplate("templates-hidden" :: "_documentCarousel" :: Nil)
-      }
-      case Full(bill) => {
+      case Full(bill) if bill.initialized.get =>
+        "#bill_section" #> {
+          for {
+            template <- S.runTemplate("templates-hidden" :: "_documentCarousel" :: Nil)
+          } yield {
+
+            (template \\ "script").foreach(script => {
+              S.putAtEndOfBody(Elem.apply(null, script.label, script.attributes, script.scope, false, script.child :_*))
+            })
+
+            ("script" #> "") apply template
+          }
+        }
+      case Full(bill) =>
         "@init_bill [href]" #> (DocumentPage.menu.calcHref(Full(bill)) + "?initialize")
-      }
-      case _ => {
+      case _ =>
         "@headline *" #> "We didn't find anything." &
         "@headline_text *" #> "The bill you entered may not exist. What matters is that we don't have it." &
         "@init_bill *" #> "Search Again" &
         "@init_bill [href]" #> ("/" + AllTopicsPage.menu.path.map(_.pathItem).mkString("/"))
-      }
     }
   }
 }

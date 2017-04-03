@@ -28,7 +28,7 @@ import net.liftweb.json._
 import Serialization._
 import JsonParser._
 
-abstract class MappedList[T<:Mapper[T]](owner : T, maxLen: Int) extends MappedString[T](owner, maxLen) {
+abstract class MappedList[T<:Mapper[T]](owner : T) extends MappedText[T](owner) {
   implicit val formats = DefaultFormats // Brings in default date formats etc.
 
   def apply(v: List[String]) = super.apply(write(v))

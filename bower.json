@@ -11,7 +11,7 @@
 	"dependencies": {
 		"jquery-ui": "1.12.1",
 		"beemuse": "0.3.0",
-		"d3": "4.7.4",
+		"d3": "3.5.17",
 		"babylon-grid": "2.3",
 		"google-diff-match-patch-js": "1.0.0",
 		"jquery-pagewalkthrough": "2.7.2",

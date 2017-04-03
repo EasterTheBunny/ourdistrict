@@ -20,8 +20,8 @@ package model
 
 import net.liftweb.common._
 import net.liftweb.mapper._
-
-import com.roundeights.hasher.Implicits._
+import net.liftweb.json.JsonAST.JValue
+import net.liftweb.json.JsonDSL._
 
 class BillLayer extends LongKeyedMapper[BillLayer] with IdPK {
   def getSingleton = BillLayer
@@ -56,4 +56,18 @@ object BillLayer extends BillLayer with LongKeyedMetaMapper[BillLayer] {
   override def dbTableName = "billlayer"
 
   override def unapply(a: Any): Option[BillLayer] = BillLayer.find(By(BillLayer.hash, a.toString))
+
+  def toJSON (l: BillLayer): JValue = {
+    ("id" -> l.hash.get) ~
+    ("type" -> l.layer_type.get) ~
+    ("enum" -> l.enum.get) ~
+    ("text" -> l.text.get) ~
+    ("header" -> l.header.get) ~
+    ("proviso" -> l.proviso.get) ~
+    ("children" -> l.children.map(toJSON(_)))
+  }
+
+  def toJSON (l: List[BillLayer]): JValue = {
+    l.map(toJSON(_))
+  }
 }

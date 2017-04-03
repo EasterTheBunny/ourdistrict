@@ -35,7 +35,7 @@ class SortedTopicCookie extends LongKeyedMapper[SortedTopicCookie] with IdPK {
   }
   object ipaccess extends MappedString(this, 25)
   object useragent extends MappedString(this, 2000)
-  object topics extends MappedList(this, 2000) {
+  object topics extends MappedList(this) {
     override def defaultValue = "[]"
   }
   
