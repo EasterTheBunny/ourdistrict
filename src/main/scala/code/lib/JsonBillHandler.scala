@@ -25,132 +25,169 @@ import util.BasicTypesHelpers._
 import common._
 import http._
 import rest._
+import net.liftweb.json.JsonAST.JValue
+import net.liftweb.json.JsonDSL._
 
 
 object JsonBillHandler extends RestHelper {
+  /**
+    * Convert a JValue to a LiftResponse
+    */
+  override implicit def jsonToResp(in: JValue): LiftResponse =
+    JsonResponse(in,
+      ("Content-Type" ->
+        "application/vnd.api+json") :: Nil,
+      Nil, 200)
 
-  serve( "api" / "bill" prefix {
-    case Nil JsonGet _ =>
-      for {
-        congressStr <- S.param("congress") ?~ "You must define a congress to narrow the results." ~> 400
-        congress <- asInt(congressStr) ?~ "Congress must be parsable to an integer" ~> 400
-      } yield {
-        try {
-          Bill.toJSON(Bill.findAll(By(Bill.congress, congress)))
-        } catch {
-          case e: Exception =>
+  serve( "api" / "v1" / "bills" prefix {
+    case Nil JsonGet _ => {
+        for {
+          congressStr <- S.param("congress") ?~ "You must define a congress to narrow the results." ~> 400
+          congress <- asInt(congressStr) ?~ "Congress must be parsable to an integer" ~> 400
+        } yield {
+          val limit = S.param("limit").map(_.toLong) openOr 1000L
+          val offset = S.param("offset").map(_.toLong) openOr 0L
+
+          val retVal: JValue = ("data" -> Bill.toJSON(Bill.findAll(By(Bill.congress, congress), StartAt(offset), MaxRows(limit))))
+          retVal
         }
-        Bill.toJSON(Bill.findAll(By(Bill.congress, congress)))
       }
-    case billID :: Nil JsonGet _ =>
-      for {
-        bill <- Bill.find(By(Bill.bill_id, billID)) ?~ "Bill not found"
-      } yield {
-        S.param("q") match {
-          case Full(q) if q == "text" => {
-            /**
-              * we need to structure this as a nested tree for easy consumption
-              * the client side
-              */
-            val layers = BillLayer.findAll(By(BillLayer.bill, bill))
+    case Bill(bill) :: Nil JsonGet _ => {
+        val retVal: JValue = Bill.toJSON(bill)
 
-            // set the hash lookup
-            val lookup = layers.foldLeft(Map[String, BillLayer]())((mp, la) => {
-              mp + (la.id.get.toString -> la)
-            })
+        val out: JValue = S.param("include") match {
+          case Full(inc) if inc == "parts" => {
+            val toMerge: JValue = "relationships" -> ("parts" -> BillLayer.toJSON(BillLayer.layersForBill(bill)))
+            val merged = retVal merge toMerge
 
-            // collapse the layers
-            var roots: List[BillLayer] = Nil
-            layers.foreach(la => {
-              if(la.parent.isDefined) {
-                if(lookup.contains(la.parent.get.toString)) {
-                  lookup(la.parent.get.toString) children = lookup(la.parent.get.toString).children :+ la
+            "data" -> merged
+          }
+          case _ => "data" -> retVal
+        }
+
+        out
+      }
+    case Bill(bill) :: "parts" :: Nil JsonGet _ => {
+        BillLayer.toJSON(BillLayer.layersForBill(bill))
+      }
+    case Bill(bill) :: "parts" :: layerID :: Nil JsonGet _ => {
+        for {
+          layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        } yield {
+          val retVal = BillLayer.toJSON(layer)
+
+          val out: JValue = S.param("include") match {
+            case Full(inc) if inc == "nodes" => {
+              val nodes = LayerNode.nodesForLayer(layer)
+
+              if(nodes.length == 0) {
+                val toAdd = LayerNode.add(layer.header.get, layer.text.get, layer, Empty)
+
+                val toMerge: JValue = toAdd match {
+                  case Full(nd) =>
+                    "relationships" ->
+                      ("nodes" -> LayerNode.toJSON(nd :: Nil))
+                  case _ =>
+                    "relationships" ->
+                      ("nodes" -> LayerNode.toJSON(Nil))
                 }
+
+                val merged = retVal merge toMerge
+
+                "data" -> merged
               } else {
-                roots = roots :+ la
+                val toMerge: JValue = "relationships" ->
+                  ("nodes" -> LayerNode.toJSON(nodes))
+                val merged = retVal merge toMerge
+
+                "data" -> merged
               }
-            })
-
-            BillLayer.toJSON(roots)
-          }
-          case _ => Bill.toJSON(bill)
-        }
-      }
-    case billID :: layerID :: Nil JsonGet _ =>
-      for {
-        bill <- Bill.find(By(Bill.bill_id, billID)) ?~ "Bill not found"
-        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
-      } yield {
-        S.param("q") match {
-          case Full(q) if q == "nodes" => {
-            val nodes = LayerNode.findAll(By(LayerNode.layer, layer))
-
-            if(nodes.length == 0) {
-              LayerNode.toJSON(LayerNode.add(layer.header.get, layer.text.get, layer, Empty) :: Nil)
-            } else {
-              /**
-                * we need to structure this as a nested tree for easy consumption
-                * the client side
-                */
-              // set the hash lookup
-              val lookup = nodes.foldLeft(Map[String, LayerNode]())((mp, li) => {
-                mp + (li.hash.get -> li)
-              })
-
-              // collapse the nodes
-              var roots: List[LayerNode] = Nil
-              nodes.foreach(li => {
-                if(lookup.contains(li.parentHash.get) && li.parent.get != li.id.get) {
-                  lookup(li.parentHash.get) children = lookup(li.parentHash.get).children :+ li
-                }
-
-                if(li.parent.get == li.id.get) roots = roots :+ li
-              })
-
-              LayerNode.toJSON(roots)
             }
+            case _ => "data" -> retVal
           }
-          case _ => BillLayer.toJSON(layer)
+
+          out
         }
       }
-    case billID :: layerID :: nodeID :: Nil JsonGet _ =>
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: Nil JsonGet _ => {
+        for {
+          layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        } yield {
+          val nodes = LayerNode.nodesForLayer(layer)
+
+          if (nodes.length == 0) {
+            val toAdd = LayerNode.add(layer.header.get, layer.text.get, layer, Empty)
+
+            toAdd match {
+              case Full(nd) => LayerNode.toJSON(nd :: Nil)
+              case _ => LayerNode.toJSON(Nil)
+            }
+          } else {
+            LayerNode.toJSON(nodes)
+          }
+        }
+      }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonGet _ => {
+        for {
+          layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+          node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        } yield {
+          val retVal = LayerNode.toJSON(node)
+
+          val out: JValue = S.param("include") match {
+            case Full(inc) if inc == "comments" => {
+              val toMerge: JValue = "relationships" ->
+                ("comments" -> NodeComment.toJSON(NodeComment.commentsForNode(node)))
+              val merged = retVal merge toMerge
+
+              "data" -> merged
+            }
+            case _ => "data" -> retVal
+          }
+
+          out
+        }
+      }
+  })
+
+  serve( "api" / "v1" / "bills" prefix {
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPut LayerNode(node) => {
       for {
-        bill <- Bill.find(By(Bill.bill_id, billID)) ?~ "Bill not found"
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
       } yield {
-        S.param("q") match {
-          case Full(q) if q == "comments" => {
-            val comments = NodeComment.findAll(By(NodeComment.node, node))
-
-            if(comments.length == 0) {
-              NodeComment.toJSON(comments)
-            } else {
-              /**
-                * we need to structure this as a nested tree for easy consumption
-                * the client side
-                */
-              // set the hash lookup
-              val lookup = comments.foldLeft(Map[String, NodeComment]())((mp, nc) => {
-                mp + (nc.hash.get -> nc)
-              })
-
-              // collapse the nodes
-              var roots: List[NodeComment] = Nil
-              comments.foreach(nc => {
-                if(lookup.contains(nc.parentHash.get) && nc.parent.get != nc.id.get) {
-                  lookup(nc.parentHash.get) children = lookup(nc.parentHash.get).children :+ nc
-                }
-
-                if(nc.parent.get == nc.id.get) roots = roots :+ nc
-              })
-
-              NodeComment.toJSON(roots)
-            }
-          }
-          case _ => LayerNode.toJSON(node)
+        LayerNode.add(node.statement.get, node.details.get, layer, Full(node)) match {
+          case Full(nd) => JsonResponse(LayerNode.toJSON(nd),
+                                              ("Content-Type" ->
+                                                "application/vnd.api+json") :: Nil,
+                                              Nil, 200)
+          case _ =>
+            val resp: JValue = "errors" -> S.errors.map(_._2.openOr(""))
+            JsonResponse(resp, ("Content-Type" -> "application/vnd.api+json") :: Nil, Nil, 400)
         }
       }
+    }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPost json => {
+      for {
+        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+      } yield {
+        val retVal = LayerNode.toJSON(node)
+
+        val out: JValue = S.param("include") match {
+          case Full(inc) if inc == "comments" => {
+            val toMerge: JValue = "relationships" ->
+              ("comments" -> NodeComment.toJSON(NodeComment.commentsForNode(node)))
+            val merged = retVal merge toMerge
+
+            "data" -> merged
+          }
+          case _ => "data" -> retVal
+        }
+
+        out
+      }
+    }
   })
 
 }

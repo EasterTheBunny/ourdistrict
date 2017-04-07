@@ -28,6 +28,14 @@ import Helpers._
 import http._
 import sitemap._
 
+import http.js.JsCmd
+import http.js.JsCmds._
+import http.js.jquery.JqJsCmds._
+import http.js.jquery.JqJE._
+import net.liftweb.http.js.JE._
+
+import net.liftmodules.widgets._
+
 import scala.xml.{Text,Node,Elem}
 import code.model._
 import net.liftweb.json.DefaultFormats
@@ -285,12 +293,7 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
           for {
             template <- S.runTemplate("templates-hidden" :: "_documentCarousel" :: Nil)
           } yield {
-
-            (template \\ "script").foreach(script => {
-              S.putAtEndOfBody(Elem.apply(null, script.label, script.attributes, script.scope, false, script.child :_*))
-            })
-
-            ("script" #> "") apply template
+            template
           }
         }
       case Full(bill) =>
