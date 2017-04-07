@@ -96,17 +96,42 @@ object NodeComment extends NodeComment with LongKeyedMetaMapper[NodeComment] {
   }
 
   def toJSON (c: NodeComment): JValue = {
+    ("type" -> "comments") ~
     ("id" -> c.hash.get) ~
-    ("parent" -> c.parentHash.get) ~
-    ("vote" -> c.vote.get) ~
-    ("text" -> c.text.get) ~
-    ("uservote" -> c.voteForCurrentUser_?) ~
-    ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")) ~
-    ("children" -> toJSON(c))
+    ("attributes" ->
+      ("parent" -> c.parentHash.get) ~
+      ("vote" -> c.vote.get) ~
+      ("text" -> c.text.get) ~
+      ("uservote" -> c.voteForCurrentUser_?) ~
+      ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")) ~
+      ("children" -> toJSON(c)))
   }
 
   def toJSON (c: List[NodeComment]): JValue = {
     c.map(toJSON(_))
+  }
+
+  def commentsForNode(node: LayerNode): List[NodeComment] = {
+    val comments = NodeComment.findAll(By(NodeComment.node, node))
+
+    /**
+      * we need to structure this as a nested tree for easy consumption
+      * the client side
+      */
+    // set the hash lookup
+    val lookup = comments.foldLeft(Map[String, NodeComment]())((mp, nc) => {
+      mp + (nc.hash.get -> nc)
+    })
+
+    // collapse the nodes
+    comments.foldLeft(List[NodeComment]())((obj, nc) => {
+      if(lookup.contains(nc.parentHash.get) && nc.parent.get != nc.id.get) {
+        lookup(nc.parentHash.get) children = lookup(nc.parentHash.get).children :+ nc
+      }
+
+      if(nc.parent.get == nc.id.get) obj :+ nc
+      else obj
+    })
   }
 
 }

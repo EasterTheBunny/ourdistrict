@@ -18,15 +18,18 @@
 package code
 package model
 
+import java.text.SimpleDateFormat
+
 import net.liftweb.common._
 import net.liftweb.mapper._
 import net.liftweb.util._
-import net.liftweb.json._
+import net.liftweb.http._
 import Helpers._
 import code.mapper.MappedList
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import com.roundeights.hasher.Implicits._
+import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.json.JsonDSL._
 
@@ -90,7 +93,21 @@ class LayerNode extends LongKeyedMapper[LayerNode] with IdPK {
 object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
   override def dbTableName = "layernode"
 
+  implicit val formats = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss-SSS'Z'")
+  }
+
+  /**
+    * Convert a JValue to a LayerNode if possible
+    */
+  def apply(in: JValue): Box[LayerNode] = tryo{in.extract[LayerNode]}
+
   override def unapply(a: Any): Option[LayerNode] = LayerNode.find(By(LayerNode.hash, a.toString))
+
+  /**
+    * Extract a JValue to a LayerNode
+    */
+  def unapply(in: JValue): Option[LayerNode] = apply(in)
 
   def findById(id: Int): Box[LayerNode] = {
     for {
@@ -98,44 +115,75 @@ object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
     } yield node
   }
 
-  def add(statement: String, details: String, layer: BillLayer, parent: Box[LayerNode]): LayerNode = {
+  def add(statement: String, details: String, layer: BillLayer, parent: Box[LayerNode]): Box[LayerNode] = {
     val newnode = LayerNode.create.statement(statement).layer(layer)
                             .dateCreated(new java.util.Date()).creator(User.currentUser)
-                            .details(details).vote(1)
+                            .details(details)
 
     User.currentUser match {
-      case Full(u) => newnode.upvotes.add(u.id.get.toString)
-      case _ =>
+      case Full(u) => newnode.vote(1).upvotes.add(u.id.get.toString)
+      case _ => newnode.vote(0)
     }
 
     val hash = (nextFuncName + newnode.statement.get).crc32
     newnode.hash(hash)
 
-    parent match {
-      case Full(p) => newnode.parent(p).parentHash(p.hash.get)
-      case _ => {
-        newnode.save
-        newnode.parent(newnode).parentHash(newnode.hash.get)
-      }
-    }
+    newnode.validate match {
+      case Nil =>
+        parent match {
+          case Full(p) => newnode.parent(p).parentHash(p.hash.get)
+          case _ => {
+            newnode.save
+            newnode.parent(newnode).parentHash(newnode.hash.get)
+          }
+        }
 
-    newnode.save
-    newnode
+        newnode.save
+        Full(newnode)
+      case errors: List[FieldError] =>
+        S.error(errors)
+        Empty ?~ "validation errors"
+    }
   }
 
   def toJSON (n: LayerNode): JValue = {
-    ("statement" -> n.statement.get) ~
-    ("details" -> n.details.get) ~
-    ("vote" -> n.vote.get) ~
-    ("uservote" -> n.voteForCurrentUser_?) ~
-    ("date" -> DateTimeFormat.forPattern("MMMM e, yyyy HH:mm:ss").print(new DateTime(n.dateCreated.get))) ~
-    ("parent" -> n.parentHash.get) ~
+    ("type" -> "nodes") ~
     ("id" -> n.hash.get) ~
-    ("user" -> n.creator.obj.map(_.username.get).openOr("unknown")) ~
-    ("children" -> n.children.map(toJSON(_)))
+    ("attributes" ->
+      ("statement" -> n.statement.get) ~
+      ("details" -> n.details.get) ~
+      ("vote" -> n.vote.get) ~
+      ("uservote" -> n.voteForCurrentUser_?) ~
+      ("date" -> DateTimeFormat.forPattern("MMMM e, yyyy HH:mm:ss").print(new DateTime(n.dateCreated.get))) ~
+      ("parent" -> n.parentHash.get) ~
+      ("user" -> n.creator.obj.map(_.username.get).openOr("phmfic")) ~
+      ("children" -> n.children.map(toJSON(_))))
   }
 
   def toJSON (n: List[LayerNode]): JValue = {
     n.map(toJSON(_))
+  }
+
+  def nodesForLayer(layer: BillLayer): List[LayerNode] = {
+    val nodes = LayerNode.findAll(By(LayerNode.layer, layer))
+
+    /**
+      * we need to structure this as a nested tree for easy consumption
+      * the client side
+      */
+    // set the hash lookup
+    val lookup = nodes.foldLeft(Map[String, LayerNode]())((mp, li) => {
+      mp + (li.hash.get -> li)
+    })
+
+    // collapse the nodes
+    nodes.foldLeft(List[LayerNode]())((rootNodes, li) => {
+      if (lookup.contains(li.parentHash.get) && li.parent.get != li.id.get) {
+        lookup(li.parentHash.get) children = lookup(li.parentHash.get).children :+ li
+      }
+
+      if (li.parent.get == li.id.get) rootNodes :+ li
+      else rootNodes
+    })
   }
 }

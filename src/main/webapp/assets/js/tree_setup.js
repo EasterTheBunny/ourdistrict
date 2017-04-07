@@ -1,4 +1,4 @@
-function setup_tree(bill, topic) {
+function setup_tree(bill, part) {
     var margin = {top: 20, right: 120, bottom: 20, left: 120},
         width = $("#layer-tree").width() - margin.right - margin.left,
         height = 800 - margin.top - margin.bottom;
@@ -19,8 +19,13 @@ function setup_tree(bill, topic) {
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    d3.json("/api/bill/" + bill + "/" + topic + "?q=nodes", function(error, flare) {
+    d3.json("/api/v1/bills/" + bill + "/parts/" + part + "?include=nodes", function(error, flare) {
         if (error) throw error;
+        if(flare.data && flare.data.relationships && flare.data.relationships.nodes) {
+            flare = flare.data.relationships.nodes;
+        } else {
+            flare = [];
+        }
 
         if(flare.length > 0) {
             root = flare[0];
@@ -33,14 +38,14 @@ function setup_tree(bill, topic) {
             *   all on load, comment out this area.
             */
             function collapse(d) {
-                if (d.children && d.children.length > 0) {
-                    d._children = d.children;
-                    d._children.forEach(collapse);
-                    d.children = null;
+                if (d.attributes.children && d.attributes.children.length > 0) {
+                    d.attributes._children = d.attributes.children;
+                    d.attributes._children.forEach(collapse);
+                    d.attributes.children = null;
                 }
             }
 
-            if(root.children) root.children.forEach(collapse);
+            if(root.attributes.children) root.attributes.children.forEach(collapse);
             update(root);
             setupNodeInfo(root);
         }
@@ -72,9 +77,9 @@ function setup_tree(bill, topic) {
           .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
       nodeEnter.append("text")
-          .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+          .attr("x", function(d) { return d.attributes.children || d.attributes._children ? -10 : 10; })
           .attr("dy", ".35em")
-          .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+          .attr("text-anchor", function(d) { return d.attributes.children || d.attributes._children ? "end" : "start"; })
           .text(function(d) { return d.id; })
           .style("fill-opacity", 1e-6);
 
@@ -86,7 +91,7 @@ function setup_tree(bill, topic) {
 
       nodeUpdate.select("circle")
           .attr("r", 6.5)
-          .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+          .style("fill", function(d) { return d.attributes._children ? "lightsteelblue" : "#fff"; });
 
       nodeUpdate.select("text")
           .style("fill-opacity", 1);
@@ -143,12 +148,12 @@ function setup_tree(bill, topic) {
         setupNodeInfo(d);
 
         if(d.id != root.id) {
-            if (d.children) {
-                d._children = d.children;
-                d.children = null;
+            if (d.attributes.children) {
+                d.attributes._children = d.attributes.children;
+                d.attributes.children = null;
             } else {
-                d.children = d._children;
-                d._children = null;
+                d.attributes.children = d.attributes._children;
+                d.attributes._children = null;
             }
         }
 
@@ -157,27 +162,30 @@ function setup_tree(bill, topic) {
 
     function leadsToTarget( d, target ) {
         if(d.id == target.id) return true;
-        else if(d.children && d.children.length > 0) {
+        else if(d.attributes.children && d.attributes.children.length > 0) {
             var fnd = false;
-            for(var x = 0, len = d.children.length; x < len; x++) {
-                if(leadsToTarget(d.children[x], target)) return true;
+            for(var x = 0, len = d.attributes.children.length; x < len; x++) {
+                if(leadsToTarget(d.attributes.children[x], target)) return true;
             }
         } else return false;
     }
 
     function setupNodeInfo( node ) {
-        $("#title").find("[name='header']").text(node.statement);
-        $("#title").find("[name='text']").text(node.details);
+        $("#title").find("[name='header']").text(node.attributes.statement);
+        $("#title").find("[name='text']").text(node.attributes.details);
+        $("#edit-node").trigger("local.setupEdit", [ node ] );
 
         setupNodeComments(node);
     }
 
     function setupNodeComments( node ) {
         $.ajax({
-            url: "/api/bill/" + bill + "/" + topic + "/" + node.id + "?q=comments",
+            url: "/api/v1/bills/" + bill + "/parts/" + part + "/nodes/" + node.id + "?include=comments",
             dataType: "json"
-        }).done(function(json){
-            drawNodeComments( json );
+        }).done(function( json ){
+            if(json.data && json.data.relationships && json.data.relationships.comments) {
+                drawNodeComments( json.data.relationships.comments );
+            }
         });
     }
 
@@ -201,7 +209,7 @@ function setup_tree(bill, topic) {
         var reply_button = $('<span class="glyphicon glyphicon-comment" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="reply">&nbsp;</span>');
         var downvote = $('<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="vote down">&nbsp;</span>');
         var upvote = $('<span class="glyphicon glyphicon-thumbs-up" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="vote up">&nbsp;</span>');
-        var vote = $('<span class="pull-right" style="margin-right:15px;font-size:12px;"></span>').append(comment.vote + " points");
+        var vote = $('<span class="pull-right" style="margin-right:15px;font-size:12px;"></span>').append(comment.attributes.vote + " points");
         //vote.append(vote);
 
         reply_button.bind("click", $.proxy(this._newCommentReply, this));
@@ -243,12 +251,12 @@ function setup_tree(bill, topic) {
         }, this);
 
         if(comment.uservote >= 0) {
-            if(comment.uservote > 0) upvote.addClass('uservote');
+            if(comment.attributes.uservote > 0) upvote.addClass('uservote');
             downvote.bind("click", downvotefunc);
         }
 
         if(comment.uservote <= 0) {
-            if(comment.uservote < 0) downvote.addClass('uservote');
+            if(comment.attributes.uservote < 0) downvote.addClass('uservote');
             upvote.bind("click", upvotefunc);
         }
 
@@ -257,7 +265,7 @@ function setup_tree(bill, topic) {
         pull.append(downvote);
         pull.append(reply_button);
 
-        var top = $('<div id="comment-id-' + comment.id + '"></div>').addClass("panel panel-comment" + " parent-id-" + comment.parent);
+        var top = $('<div id="comment-id-' + comment.id + '"></div>').addClass("panel panel-comment" + " parent-id-" + comment.attributes.parent);
         var heading = $('<div data-toggle="collapse" href="#' + comment.id + '" aria-expanded="true" aria-controls="' + comment.id + '"></div>').addClass("panel-heading");
         var title = $('<span></span>').addClass("panel-title").append(comment.user).append(vote);
         //heading.append(pull);
@@ -265,7 +273,7 @@ function setup_tree(bill, topic) {
         heading.append(title);
         top.append(heading);
 
-        var body = $('<div id="' + comment.id + '"></div>').addClass("panel-body collapse").append(comment.text);
+        var body = $('<div id="' + comment.id + '"></div>').addClass("panel-body collapse").append(comment.attributes.text);
         body.append(pull);
 
         var container = parent;
@@ -273,8 +281,8 @@ function setup_tree(bill, topic) {
         top.append(body);
         container.append(top);
 
-        if(comment.children && comment.children.length > 0) {
-            $.each(comment.children, function(index, value){
+        if(comment.attributes.children && comment.attributes.children.length > 0) {
+            $.each(comment.attributes.children, function(index, value){
                 newNodeComment( value, body );
             });
         }

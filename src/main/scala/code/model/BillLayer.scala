@@ -57,17 +57,48 @@ object BillLayer extends BillLayer with LongKeyedMetaMapper[BillLayer] {
 
   override def unapply(a: Any): Option[BillLayer] = BillLayer.find(By(BillLayer.hash, a.toString))
 
+  def unapply(key: String, bill: Bill): Option[BillLayer] =
+    BillLayer.find(By(BillLayer.hash, key), By(BillLayer.bill, bill))
+
   def toJSON (l: BillLayer): JValue = {
+    ("type" -> "parts") ~
     ("id" -> l.hash.get) ~
-    ("type" -> l.layer_type.get) ~
-    ("enum" -> l.enum.get) ~
-    ("text" -> l.text.get) ~
-    ("header" -> l.header.get) ~
-    ("proviso" -> l.proviso.get) ~
-    ("children" -> l.children.map(toJSON(_)))
+    ("attributes" ->
+      ("part_type" -> l.layer_type.get) ~
+      ("enum" -> l.enum.get) ~
+      ("text" -> l.text.get) ~
+      ("header" -> l.header.get) ~
+      ("proviso" -> l.proviso.get) ~
+      ("children" -> l.children.map(toJSON(_))))
   }
 
   def toJSON (l: List[BillLayer]): JValue = {
     l.map(toJSON(_))
+  }
+
+  def layersForBill (bill: Bill): List[BillLayer] = {
+    /**
+      * we need to structure this as a nested tree for easy consumption
+      * the client side
+      */
+    val layers = BillLayer.findAll(By(BillLayer.bill, bill))
+
+    // set the hash lookup
+    val lookup = layers.foldLeft(Map[String, BillLayer]())((mp, la) => {
+      mp + (la.id.get.toString -> la)
+    })
+
+    // collapse the layers
+    layers.foldLeft(List[BillLayer]())((rootList, la) => {
+      if (la.parent.isDefined) {
+        if (lookup.contains(la.parent.get.toString)) {
+          lookup(la.parent.get.toString) children = lookup(la.parent.get.toString).children :+ la
+        }
+
+        rootList
+      } else {
+        rootList :+ la
+      }
+    })
   }
 }

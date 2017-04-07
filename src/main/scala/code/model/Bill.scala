@@ -104,24 +104,30 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "sponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
   def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "cosponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
   def committees = CommitteeBill.findAll(By(CommitteeBill.bill, this.id.get)).map(_.committee.obj.openOrThrowException("something must have been deleted"))
+
+  def layerForBill(key: String) = BillLayer.find(By(BillLayer.hash, key), By(BillLayer.bill, this))
 }
 
 object Bill extends Bill with LongKeyedMetaMapper[Bill] {
   override def dbTableName = "bill"
+
+  def unapply(key: String): Option[Bill] = Bill.find(By(Bill.bill_id, key))
 
   def billTimestampInfoForCongress(congress: Integer): List[Bill] =
     Bill.findAllFields(Seq[SelectableField](Bill.id, Bill.bill_type, Bill.bill_id, Bill.last_scrape),
                         By(Bill.congress, congress))
 
   def toJSON (b: Bill): JValue = {
-    ("bill_id" -> b.bill_id.get) ~
-    ("congress" -> b.congress.get) ~
-    ("official_title" -> b.official_title.get) ~
-    ("popular_title" -> b.popular_title.get) ~
-    ("short_title" -> b.short_title.get) ~
-    ("summary" -> b.summary.get) ~
-    ("titles" -> b.titles.get) ~
-    ("pdf" -> b.pdfLink.get)
+    ("type" -> "bills") ~
+    ("id" -> b.bill_id.get) ~
+    ("attributes" ->
+      ("bill_id" -> b.bill_id.get) ~
+      ("congress" -> b.congress.get) ~
+      ("official_title" -> b.official_title.get) ~
+      ("popular_title" -> b.popular_title.get) ~
+      ("short_title" -> b.short_title.get) ~
+      ("summary" -> b.summary.get) ~
+      ("pdf" -> b.pdfLink.get))
   }
 
   def toJSON (n: List[Bill]): JValue = {
