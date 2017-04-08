@@ -40,7 +40,7 @@ watchSources <++= baseDirectory map { path => (path / "Gruntfile.js").get }
 
 //pollInterval := 5000
 
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-language:postfixOps")
 
 libraryDependencies ++= {
     val liftVersion = "3.0.1"

@@ -1,208 +1,240 @@
-function setup_tree(bill, part) {
-    var margin = {top: 20, right: 120, bottom: 20, left: 120},
-        width = $("#layer-tree").width() - margin.right - margin.left,
-        height = 800 - margin.top - margin.bottom;
-
-    var i = 0,
-        duration = 750,
-        root;
-
-    var tree = d3.layout.tree()
-        .size([height, width]);
-
-    var diagonal = d3.svg.diagonal()
-        .projection(function(d) { return [d.y, d.x]; });
-
-    var svg = d3.select("#layer-tree").append("svg")
-        .attr("width", width + margin.right + margin.left)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    d3.json("/api/v1/bills/" + bill + "/parts/" + part + "?include=nodes", function(error, flare) {
-        if (error) throw error;
-        if(flare.data && flare.data.relationships && flare.data.relationships.nodes) {
-            flare = flare.data.relationships.nodes;
-        } else {
-            flare = [];
+$.widget("custom.tree", {
+    _create: function(){
+        var elem = this.element;
+        this.elemid = elem.attr("id");
+        if(this.elemid == "") {
+            this.elemid = "custom-tree-container";
+            this.elem.attr("id", elemid);
         }
+        this.margin = margin = {top: 20, right: 120, bottom: 20, left: 120};
+        this.width = width = elem.width() - margin.right - margin.left
+        this.height = height = 800 - margin.top - margin.bottom;
 
-        if(flare.length > 0) {
-            root = flare[0];
-            root.x0 = height / 2;
-            root.y0 = 0;
+        this.i = 0;
+        this.duration = 750;
+        this.root;
 
-            /**
-            *   collapse puts all children of all elements in a
-            *   'hidden' space so as not to be rendered. to show
-            *   all on load, comment out this area.
-            */
-            function collapse(d) {
-                if (d.attributes.children && d.attributes.children.length > 0) {
-                    d.attributes._children = d.attributes.children;
-                    d.attributes._children.forEach(collapse);
-                    d.attributes.children = null;
+        this.tree = d3.layout.tree().size([height, width]);
+        this.diagonal = d3.svg.diagonal().projection(function(d) { return [d.y, d.x]; });
+
+        this.svg = d3.select("#" + this.elemid).append("svg")
+            .attr("width", width + margin.right + margin.left)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    },
+
+    loadPart: function( bill, part ){
+        var widget = this;
+        this.bill = bill;
+        this.part = part;
+
+        var url = "/api/v1/bills/" + this.bill + "/parts/" + this.part + "?include=nodes";
+
+        $.ajax({
+            url: url,
+            method: "GET",
+            dataType: "json"
+        }).done(function( json ){
+            if(json.data && json.data.relationships.nodes && json.data.relationships.nodes.length > 0) {
+                root = json.data.relationships.nodes[0];
+                root.x0 = height / 2;
+                root.y0 = 0;
+
+                /**
+                *   collapse puts all children of all elements in a
+                *   'hidden' space so as not to be rendered. to show
+                *   all on load, comment out this area.
+                */
+                function collapse(d) {
+                    if (d.children && d.children.length > 0) {
+                        d._children = d.children;
+                        d._children.forEach(collapse);
+                        d.children = null;
+                    }
                 }
+
+                if(root.children) {
+                    root.children.forEach(collapse);
+                }
+
+                widget.root = root;
+
+                widget.update(widget.root);
+                widget._setupNodeInfo(widget.root);
             }
 
-            if(root.attributes.children) root.attributes.children.forEach(collapse);
-            update(root);
-            setupNodeInfo(root);
-        }
-    });
+        }).fail(function(){
 
-    d3.select(self.frameElement).style("height", "800px");
+        });
+    },
 
-    function update(source) {
+    update: function( source ) {
+        var widget = this;
+        var svg = this.svg;
+        var tree = this.tree;
+        var duration = this.duration;
+        var diagonal = this.diagonal;
 
-      // Compute the new tree layout.
-      var nodes = tree.nodes(root).reverse(),
-          links = tree.links(nodes);
+        // Compute the new tree layout.
+        var nodes = tree.nodes(this.root).reverse(),
+            links = tree.links(nodes);
 
-      // Normalize for fixed-depth.
-      nodes.forEach(function(d) { d.y = d.depth * 180; });
+        // Normalize for fixed-depth.
+        nodes.forEach(function(d) { d.y = d.depth * 180; });
 
-      // Update the nodes…
-      var node = svg.selectAll("g.node")
-          .data(nodes, function(d) { return d.id || (d.id = ++i); });
+          // Update the nodes…
+          var node = svg.selectAll("g.node")
+              .data(nodes, function(d) { return d.id || (d.id = ++i); });
 
-      // Enter any new nodes at the parent's previous position.
-      var nodeEnter = node.enter().append("g")
-          .attr("class", "node")
-          .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-          .on("click", click);
+          // Enter any new nodes at the parent's previous position.
+          var nodeEnter = node.enter().append("g")
+              .attr("id", function(d) { return d.id; })
+              .attr("class", "node")
+              .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+              .on("click", this.click.bind(this));
 
-      nodeEnter.append("circle")
-          .attr("r", 1e-6)
-          .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+          nodeEnter.append("circle")
+              .attr("r", 1e-6)
+              .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
-      nodeEnter.append("text")
-          .attr("x", function(d) { return d.attributes.children || d.attributes._children ? -10 : 10; })
-          .attr("dy", ".35em")
-          .attr("text-anchor", function(d) { return d.attributes.children || d.attributes._children ? "end" : "start"; })
-          .text(function(d) { return d.id; })
-          .style("fill-opacity", 1e-6);
+          nodeEnter.append("text")
+              .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+              .attr("dy", ".35em")
+              .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+              .text(function(d) { return d.id; })
+              .style("fill-opacity", 1e-6);
 
-      // Transition nodes to their new position.
-      var nodeUpdate = node.transition()
-          .duration(duration)
-          .attr("class", function(d){ return d.id == source.id ? "node temp" : "node"; })
-          .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+          // Transition nodes to their new position.
+          var nodeUpdate = node.transition()
+              .duration(duration)
+              .attr("class", function(d){ return d.id == source.id ? "node temp" : "node"; })
+              .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
 
-      nodeUpdate.select("circle")
-          .attr("r", 6.5)
-          .style("fill", function(d) { return d.attributes._children ? "lightsteelblue" : "#fff"; });
+          nodeUpdate.select("circle")
+              .attr("r", 6.5)
+              .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
-      nodeUpdate.select("text")
-          .style("fill-opacity", 1);
+          nodeUpdate.select("text")
+              .style("fill-opacity", 1);
 
-      // Transition exiting nodes to the parent's new position.
-      var nodeExit = node.exit().transition()
-          .duration(duration)
-          .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
-          .attr("class", "node")
-          .remove();
+          // Transition exiting nodes to the parent's new position.
+          var nodeExit = node.exit().transition()
+              .duration(duration)
+              .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+              .attr("class", "node")
+              .remove();
 
-      nodeExit.select("circle")
-          .attr("r", 1e-6);
+          nodeExit.select("circle")
+              .attr("r", 1e-6);
 
-      nodeExit.select("text")
-          .style("fill-opacity", 1e-6);
+          nodeExit.select("text")
+              .style("fill-opacity", 1e-6);
 
-      // Update the links…
-      var link = svg.selectAll("path.link")
-          .data(links, function(d) { return d.target.id; })
-          .attr("class", function(d){ return leadsToTarget(d.target, source) ? "link selected" : "link" });
+          // Update the links…
+          var link = svg.selectAll("path.link")
+              .data(links, function(d) { return d.target.id; })
+              .attr("class", function(d){ return widget._leadsToTarget(d.target, source) ? "link selected" : "link" });
 
-      // Enter any new links at the parent's previous position.
-      link.enter().insert("path", "g")
-          .attr("class", "link")
-          .attr("d", function(d) {
-            var o = {x: source.x0, y: source.y0};
-            return diagonal({source: o, target: o});
+          // Enter any new links at the parent's previous position.
+          link.enter().insert("path", "g")
+              .attr("class", "link")
+              .attr("d", function(d) {
+                var o = {x: source.x0, y: source.y0};
+                return diagonal({source: o, target: o});
+              });
+
+          // Transition links to their new position.
+          link.transition()
+              .duration(duration)
+              .attr("d", diagonal);
+
+          // Transition exiting nodes to the parent's new position.
+          link.exit().transition()
+              .duration(duration)
+              .attr("d", function(d) {
+                var o = {x: source.x, y: source.y};
+                return diagonal({source: o, target: o});
+              })
+              .remove();
+
+          // Stash the old positions for transition.
+          nodes.forEach(function(d) {
+            d.x0 = d.x;
+            d.y0 = d.y;
           });
+    },
 
-      // Transition links to their new position.
-      link.transition()
-          .duration(duration)
-          .attr("d", diagonal);
-
-      // Transition exiting nodes to the parent's new position.
-      link.exit().transition()
-          .duration(duration)
-          .attr("d", function(d) {
-            var o = {x: source.x, y: source.y};
-            return diagonal({source: o, target: o});
-          })
-          .remove();
-
-      // Stash the old positions for transition.
-      nodes.forEach(function(d) {
-        d.x0 = d.x;
-        d.y0 = d.y;
-      });
-    }
-
-    // Toggle children on click.
-    function click(d) {
-        setupNodeInfo(d);
+    click: function( d ) {
+        // Toggle children on click.
+        this._setupNodeInfo( d );
 
         if(d.id != root.id) {
-            if (d.attributes.children) {
-                d.attributes._children = d.attributes.children;
-                d.attributes.children = null;
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
             } else {
-                d.attributes.children = d.attributes._children;
-                d.attributes._children = null;
+                d.children = d._children;
+                d._children = null;
             }
         }
 
-        update(d);
-    }
+        this.update( d );
+    },
 
-    function leadsToTarget( d, target ) {
+    selectNode: function( d ) {
+        // this isn't working and i don't know why
+        // need to go, won't finish
+        $("#" + d.id).trigger("click");
+    },
+
+    _leadsToTarget: function( d, target ) {
         if(d.id == target.id) return true;
-        else if(d.attributes.children && d.attributes.children.length > 0) {
+        else if(d.children && d.children.length > 0) {
             var fnd = false;
-            for(var x = 0, len = d.attributes.children.length; x < len; x++) {
-                if(leadsToTarget(d.attributes.children[x], target)) return true;
+            for(var x = 0, len = d.children.length; x < len; x++) {
+                if(this._leadsToTarget(d.children[x], target)) return true;
             }
         } else return false;
-    }
+    },
 
-    function setupNodeInfo( node ) {
+    _setupNodeInfo: function( node ) {
         $("#title").find("[name='header']").text(node.attributes.statement);
         $("#title").find("[name='text']").text(node.attributes.details);
         $("#edit-node").trigger("local.setupEdit", [ node ] );
 
-        setupNodeComments(node);
-    }
+        this._setupNodeComments(node);
+    },
 
-    function setupNodeComments( node ) {
+    _setupNodeComments: function( node ) {
+        var widget = this;
+
         $.ajax({
-            url: "/api/v1/bills/" + bill + "/parts/" + part + "/nodes/" + node.id + "?include=comments",
+            url: "/api/v1/bills/" + this.bill + "/parts/" + this.part + "/nodes/" + node.id + "?include=comments",
             dataType: "json"
         }).done(function( json ){
             if(json.data && json.data.relationships && json.data.relationships.comments) {
-                drawNodeComments( json.data.relationships.comments );
+                widget._drawNodeComments( json.data.relationships.comments );
             }
         });
-    }
+    },
 
-    function drawNodeComments( comments ) {
+    _drawNodeComments: function( comments ) {
+        var widget = this;
         var container = $("#comment-id-root");
         container.empty();
 
         $.each(comments, function(index, value) {
-            newNodeComment( value, container );
+            widget._newNodeComment( value, container );
 
             $('[data-toggle="tooltip"]').tooltip()
         });
 
         $('.collapse.panel-body').collapse('show');
-    }
+    },
 
-    function newNodeComment( comment, parent ) {
+    _newNodeComment: function( comment, parent ) {
         // if parent exists in DOM, insert into parent
         // if children exist in the DOM, wrap them into element
 
@@ -281,10 +313,11 @@ function setup_tree(bill, part) {
         top.append(body);
         container.append(top);
 
-        if(comment.attributes.children && comment.attributes.children.length > 0) {
-            $.each(comment.attributes.children, function(index, value){
+        if(comment.children && comment.children.length > 0) {
+            $.each(comment.children, function(index, value){
                 newNodeComment( value, body );
             });
         }
     }
-};
+});
+
