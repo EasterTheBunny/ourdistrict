@@ -28,6 +28,8 @@ import rest._
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.json.JsonDSL._
 
+case class LayerNodeCase(statement: Option[String],
+                         details: String)
 
 object JsonBillHandler extends RestHelper {
   /**
@@ -38,6 +40,8 @@ object JsonBillHandler extends RestHelper {
       ("Content-Type" ->
         "application/vnd.api+json") :: Nil,
       Nil, 200)
+
+  def LayerNodePut(in: JValue): Box[LayerNodeCase] = tryo{in.extract[LayerNodeCase]}
 
   serve( "api" / "v1" / "bills" prefix {
     case Nil JsonGet _ => {
@@ -68,7 +72,8 @@ object JsonBillHandler extends RestHelper {
         out
       }
     case Bill(bill) :: "parts" :: Nil JsonGet _ => {
-        BillLayer.toJSON(BillLayer.layersForBill(bill))
+        val retVal: JValue = "data" -> BillLayer.toJSON(BillLayer.layersForBill(bill))
+        retVal
       }
     case Bill(bill) :: "parts" :: layerID :: Nil JsonGet _ => {
         for {
@@ -118,12 +123,15 @@ object JsonBillHandler extends RestHelper {
           if (nodes.length == 0) {
             val toAdd = LayerNode.add(layer.header.get, layer.text.get, layer, Empty)
 
-            toAdd match {
-              case Full(nd) => LayerNode.toJSON(nd :: Nil)
-              case _ => LayerNode.toJSON(Nil)
+            val retVal: JValue = toAdd match {
+              case Full(nd) => "data" -> LayerNode.toJSON(nd :: Nil)
+              case _ => "data" -> LayerNode.toJSON(Nil)
             }
+
+            retVal
           } else {
-            LayerNode.toJSON(nodes)
+            val retVal: JValue = "data" -> LayerNode.toJSON(nodes)
+            retVal
           }
         }
       }
@@ -148,44 +156,83 @@ object JsonBillHandler extends RestHelper {
           out
         }
       }
-  })
-
-  serve( "api" / "v1" / "bills" prefix {
-    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPut LayerNode(node) => {
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: Nil JsonGet _ => {
       for {
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
       } yield {
-        LayerNode.add(node.statement.get, node.details.get, layer, Full(node)) match {
+        val retVal: JValue = "data" -> NodeComment.toJSON(NodeComment.commentsForNode(node))
+        retVal
+      }
+    }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: commentID :: Nil JsonGet _ => {
+      for {
+        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        comment <- NodeComment.find(By(NodeComment.node, node), By(NodeComment.hash, commentID)) ?~ "comment not found"
+      } yield {
+        val retVal: JValue = "data" -> NodeComment.toJSON(comment)
+        retVal
+      }
+    }
+  })
+
+  serve( "api" / "v1" / "bills" prefix {
+    case "testput" :: Nil JsonPut json -> _ => {
+      val retVal: JValue = "data" -> json
+      retVal
+    }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPut json -> _ => {
+      for {
+        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        parent <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        node <- tryo{json.extract[LayerNodeCase]} ?~ "input elements not parsable" ~> 400
+      } yield {
+        LayerNode.add(node.statement.getOrElse(""), node.details, layer, Full(parent)) match {
           case Full(nd) => JsonResponse(LayerNode.toJSON(nd),
                                               ("Content-Type" ->
                                                 "application/vnd.api+json") :: Nil,
                                               Nil, 200)
           case _ =>
-            val resp: JValue = "errors" -> S.errors.map(_._2.openOr(""))
-            JsonResponse(resp, ("Content-Type" -> "application/vnd.api+json") :: Nil, Nil, 400)
+            JsonResponse("errors" -> S.errors.map(_._2.openOr("")),
+              ("Content-Type" -> "application/vnd.api+json") :: Nil,
+              Nil, 400)
         }
       }
     }
-    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPost json => {
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: Nil JsonPut NodeComment(comment) => {
       for {
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
       } yield {
-        val retVal = LayerNode.toJSON(node)
-
-        val out: JValue = S.param("include") match {
-          case Full(inc) if inc == "comments" => {
-            val toMerge: JValue = "relationships" ->
-              ("comments" -> NodeComment.toJSON(NodeComment.commentsForNode(node)))
-            val merged = retVal merge toMerge
-
-            "data" -> merged
-          }
-          case _ => "data" -> retVal
+        NodeComment.add(comment.text.get, node, Empty) match {
+          case Full(cm) => JsonResponse(NodeComment.toJSON(cm),
+                                              ("Content-Type" ->
+                                                "application/vnd.api+json") :: Nil,
+                                              Nil, 200)
+          case _ =>
+            JsonResponse("errors" -> S.errors.map(_._2.openOr("")),
+              ("Content-Type" -> "application/vnd.api+json") :: Nil,
+              Nil, 400)
         }
-
-        out
+      }
+    }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: commentID :: Nil JsonPut NodeComment(comment) => {
+      for {
+        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        parent <- NodeComment.find(By(NodeComment.node, node), By(NodeComment.hash, commentID)) ?~ "comment not found"
+      } yield {
+        NodeComment.add(comment.text.get, node, Full(parent)) match {
+          case Full(cm) => JsonResponse(NodeComment.toJSON(cm),
+            ("Content-Type" ->
+              "application/vnd.api+json") :: Nil,
+            Nil, 200)
+          case _ =>
+            JsonResponse("errors" -> S.errors.map(_._2.openOr("")),
+              ("Content-Type" -> "application/vnd.api+json") :: Nil,
+              Nil, 400)
+        }
       }
     }
   })

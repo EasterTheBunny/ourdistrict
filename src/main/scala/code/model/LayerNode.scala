@@ -149,6 +149,7 @@ object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
   def toJSON (n: LayerNode): JValue = {
     ("type" -> "nodes") ~
     ("id" -> n.hash.get) ~
+    ("children" -> n.children.map(toJSON(_))) ~
     ("attributes" ->
       ("statement" -> n.statement.get) ~
       ("details" -> n.details.get) ~
@@ -156,8 +157,7 @@ object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
       ("uservote" -> n.voteForCurrentUser_?) ~
       ("date" -> DateTimeFormat.forPattern("MMMM e, yyyy HH:mm:ss").print(new DateTime(n.dateCreated.get))) ~
       ("parent" -> n.parentHash.get) ~
-      ("user" -> n.creator.obj.map(_.username.get).openOr("phmfic")) ~
-      ("children" -> n.children.map(toJSON(_))))
+      ("user" -> n.creator.obj.map(_.username.get).openOr("phmfic")))
   }
 
   def toJSON (n: List[LayerNode]): JValue = {

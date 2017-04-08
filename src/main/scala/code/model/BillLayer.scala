@@ -63,13 +63,14 @@ object BillLayer extends BillLayer with LongKeyedMetaMapper[BillLayer] {
   def toJSON (l: BillLayer): JValue = {
     ("type" -> "parts") ~
     ("id" -> l.hash.get) ~
+    ("children" -> l.children.map(toJSON(_))) ~
     ("attributes" ->
       ("part_type" -> l.layer_type.get) ~
       ("enum" -> l.enum.get) ~
       ("text" -> l.text.get) ~
       ("header" -> l.header.get) ~
       ("proviso" -> l.proviso.get) ~
-      ("children" -> l.children.map(toJSON(_))))
+      ("quoted" -> l.quoted.get))
   }
 
   def toJSON (l: List[BillLayer]): JValue = {

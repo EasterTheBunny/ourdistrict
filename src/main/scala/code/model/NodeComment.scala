@@ -18,12 +18,15 @@
 package code
 package model
 
+import java.text.SimpleDateFormat
+
 import net.liftweb.common._
 import net.liftweb.mapper._
 import net.liftweb.util._
 import Helpers._
 import code.mapper.MappedList
 import com.roundeights.hasher.Implicits._
+import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.json.JsonDSL._
 
@@ -76,7 +79,23 @@ class NodeComment extends LongKeyedMapper[NodeComment] with IdPK {
 object NodeComment extends NodeComment with LongKeyedMetaMapper[NodeComment] {
   override def dbTableName = "nodecomment"
 
-  def add(text: String, node: LayerNode, parent: Box[NodeComment]): NodeComment = {
+  implicit val formats = new DefaultFormats {
+    override def dateFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss-SSS'Z'")
+  }
+
+  /**
+    * Convert a JValue to a NodeComment if possible
+    */
+  def apply(in: JValue): Box[NodeComment] = tryo{in.extract[NodeComment]}
+
+  override def unapply(a: Any): Option[NodeComment] = NodeComment.find(By(NodeComment.hash, a.toString))
+
+  /**
+    * Extract a JValue to a NodeComment
+    */
+  def unapply(in: JValue): Option[NodeComment] = apply(in)
+
+  def add(text: String, node: LayerNode, parent: Box[NodeComment]): Box[NodeComment] = {
     val comment = NodeComment.create.text(text.trim()).dateCreated(new java.util.Date())
                               .node(node).vote(1).creator(User.currentUser)
                               .hash((nextFuncName + text).crc32)
@@ -92,19 +111,19 @@ object NodeComment extends NodeComment with LongKeyedMetaMapper[NodeComment] {
     }
 
     comment.save
-    comment
+    Full(comment)
   }
 
   def toJSON (c: NodeComment): JValue = {
     ("type" -> "comments") ~
     ("id" -> c.hash.get) ~
+    ("children" -> toJSON(c)) ~
     ("attributes" ->
       ("parent" -> c.parentHash.get) ~
       ("vote" -> c.vote.get) ~
       ("text" -> c.text.get) ~
       ("uservote" -> c.voteForCurrentUser_?) ~
-      ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")) ~
-      ("children" -> toJSON(c)))
+      ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")))
   }
 
   def toJSON (c: List[NodeComment]): JValue = {
