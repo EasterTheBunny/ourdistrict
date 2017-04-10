@@ -20,11 +20,12 @@ package model
 
 import java.text.SimpleDateFormat
 
-import net.liftweb.common._
-import net.liftweb.mapper._
-import net.liftweb.util._
+import net.liftweb._
+import common._
+import mapper._
+import util._
 import Helpers._
-import code.mapper.MappedList
+
 import com.roundeights.hasher.Implicits._
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonAST.JValue
@@ -41,12 +42,8 @@ class NodeComment extends LongKeyedMapper[NodeComment] with IdPK {
   object node extends MappedLongForeignKey(this, LayerNode)
   object hash extends MappedString(this, 64)
   object vote extends MappedInt(this)
-  object upvotes extends MappedList(this) {
-    override def defaultValue = "[]"
-  }
-  object downvotes extends MappedList(this) {
-    override def defaultValue = "[]"
-  }
+  object upVotes extends MappedInt(this)
+  object downVotes extends MappedInt(this)
   object parent extends MappedLongForeignKey(this, NodeComment) {
     override def dbIndexed_? = true
   }
@@ -54,23 +51,46 @@ class NodeComment extends LongKeyedMapper[NodeComment] with IdPK {
 
   def voteForCurrentUser_?(): Int = {
     User.currentUser match {
-      case Full(user) =>
-        if(upvotes.asList.contains(user.id.get.toString)) 1
-        else if(downvotes.asList.contains(user.id.get.toString)) -1
-        else 0
-
+      case Full(user) =>  0
       case _ => 0
     }
   }
 
-  def voteUpForUser(user: User) = {
-    downvotes.remove(user.id.get.toString).save
-    upvotes.add(user.id.get.toString).save
-  }
+  def currentUserVote: Box[UserCommentVote] =
+    User.currentUser.map(u =>
+      UserCommentVote.find(By(UserCommentVote.user, u),
+                           By(UserCommentVote.comment, this))) openOr Empty
 
-  def voteDownForUser(user: User) = {
-    upvotes.remove(user.id.get.toString).save
-    downvotes.add(user.id.get.toString).save
+  def doVote(vote: Int): Any = {
+    /**
+      * vote (absolute):
+      *   1 = upvote
+      *   0 = neutral vote
+      *   -1 = downvote
+      */
+    val validVote = if(vote > 1) 1 else if(vote < -1) -1 else vote
+    val theVote = currentUserVote match {
+      case Full(v) =>
+        val oldVote = v.vote.get
+        v.vote(validVote).check(validVote != 0).dateRecorded(new java.util.Date()).save
+
+        if(oldVote != 0) (oldVote - v.vote.get) * -1
+        else oldVote - v.vote.get
+
+      case _ =>
+        UserCommentVote.create.vote(validVote).dateRecorded(new java.util.Date())
+          .user(User.currentUser).comment(this).check(validVote != 0).save
+
+        validVote
+    }
+
+    val up = if(theVote > 0) 1 else if(theVote < -1) -1 else 0
+    val down = if(theVote > 1) -1 else if(theVote < 0) 1 else 0
+    val stmtc = "update "+getSingleton.dbTableName+" set vote = vote + " +
+                theVote+", upvotes = upvotes + "+up+", downvotes = downvotes + " +
+                down+" where "+getSingleton.dbTableName+".id = "+this.id.get
+
+    DB.runUpdate(stmtc, Nil, getSingleton.dbDefaultConnectionIdentifier)
   }
 
   var children: List[NodeComment] = Nil
@@ -100,8 +120,6 @@ object NodeComment extends NodeComment with LongKeyedMetaMapper[NodeComment] {
                               .node(node).vote(1).creator(User.currentUser)
                               .hash((nextFuncName + text).crc32)
 
-    User.currentUser.map( u => comment.upvotes.add(u.id.get.toString) )
-
     parent match {
       case Full(p) => comment.parent(p).parentHash(p.hash.get)
       case _ => {
@@ -111,18 +129,25 @@ object NodeComment extends NodeComment with LongKeyedMetaMapper[NodeComment] {
     }
 
     comment.save
+
+    User.currentUser.map( u => {
+      UserCommentVote.create.user(u).dateRecorded(new java.util.Date()).check(true).save
+      comment.doVote(1)
+    })
+
     Full(comment)
   }
 
   def toJSON (c: NodeComment): JValue = {
     ("type" -> "comments") ~
     ("id" -> c.hash.get) ~
-    ("children" -> toJSON(c)) ~
+    ("children" -> NodeComment.toJSON(c.children)) ~
     ("attributes" ->
       ("parent" -> c.parentHash.get) ~
-      ("vote" -> c.vote.get) ~
       ("text" -> c.text.get) ~
-      ("uservote" -> c.voteForCurrentUser_?) ~
+      ("upvotes" -> c.upVotes.get) ~
+      ("downvotes" -> c.downVotes.get) ~
+      ("uservote" -> User.currentUser.map(_.votedForComment(c).map(_.vote.get) openOr 0).openOr(0)) ~
       ("user" -> c.creator.obj.map(_.username.get).openOr("unknown")))
   }
 

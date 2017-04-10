@@ -25,9 +25,8 @@ import net.liftweb.mapper._
 import net.liftweb.util._
 import net.liftweb.http._
 import Helpers._
-import code.mapper.MappedList
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
+import org.joda.time.format.{DateTimeFormat}
 import com.roundeights.hasher.Implicits._
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.JsonAST.JValue
@@ -42,12 +41,6 @@ class LayerNode extends LongKeyedMapper[LayerNode] with IdPK {
   object vote extends MappedInt(this)
   object nodeID extends MappedInt(this)
   object hash extends MappedString(this, 64)
-  object upvotes extends MappedList(this) {
-    override def defaultValue = "[]"
-  }
-  object downvotes extends MappedList(this) {
-    override def defaultValue = "[]"
-  }
   object commentCount extends MappedInt(this)
   object commentVoteTotal extends MappedInt(this)
   object layer extends MappedLongForeignKey(this, BillLayer) {
@@ -67,23 +60,17 @@ class LayerNode extends LongKeyedMapper[LayerNode] with IdPK {
 
   def voteForCurrentUser_?(): Int = {
     User.currentUser match {
-      case Full(user) =>
-        if(upvotes.asList.contains(user.id.get.toString)) 1
-        else if(downvotes.asList.contains(user.id.get.toString)) -1
-        else 0
-
+      case Full(user) => 0
       case _ => 0
     }
   }
 
   def voteUpForUser(user: User) = {
-    downvotes.remove(user.id.get.toString).save
-    upvotes.add(user.id.get.toString).save
+
   }
 
   def voteDownForUser(user: User) = {
-    upvotes.remove(user.id.get.toString).save
-    downvotes.add(user.id.get.toString).save
+
   }
 
   var children: List[LayerNode] = Nil
@@ -120,10 +107,10 @@ object LayerNode extends LayerNode with LongKeyedMetaMapper[LayerNode] {
                             .dateCreated(new java.util.Date()).creator(User.currentUser)
                             .details(details)
 
-    User.currentUser match {
+    /*User.currentUser match {
       case Full(u) => newnode.vote(1).upvotes.add(u.id.get.toString)
       case _ => newnode.vote(0)
-    }
+    }*/
 
     val hash = (nextFuncName + newnode.statement.get).crc32
     newnode.hash(hash)

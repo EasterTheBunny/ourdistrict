@@ -21,6 +21,7 @@ package lib
 import model._
 import net.liftweb._
 import mapper._
+import util._
 import util.BasicTypesHelpers._
 import common._
 import http._
@@ -31,6 +32,11 @@ import net.liftweb.json.JsonDSL._
 case class LayerNodeCase(statement: Option[String],
                          details: String)
 
+case class NodeCommentCase(text: String)
+
+case class PostNodeCommentCase(text: Option[String],
+                                vote: Option[Int])
+
 object JsonBillHandler extends RestHelper {
   /**
     * Convert a JValue to a LiftResponse
@@ -40,8 +46,6 @@ object JsonBillHandler extends RestHelper {
       ("Content-Type" ->
         "application/vnd.api+json") :: Nil,
       Nil, 200)
-
-  def LayerNodePut(in: JValue): Box[LayerNodeCase] = tryo{in.extract[LayerNodeCase]}
 
   serve( "api" / "v1" / "bills" prefix {
     case Nil JsonGet _ => {
@@ -178,19 +182,16 @@ object JsonBillHandler extends RestHelper {
   })
 
   serve( "api" / "v1" / "bills" prefix {
-    case "testput" :: Nil JsonPut json -> _ => {
-      val retVal: JValue = "data" -> json
-      retVal
-    }
     case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: Nil JsonPut json -> _ => {
       for {
+        user <- User.currentUser ?~ "You must be logged in to perform this function" ~> 403
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         parent <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
         node <- tryo{json.extract[LayerNodeCase]} ?~ "input elements not parsable" ~> 400
       } yield {
         LayerNode.add(node.statement.getOrElse(""), node.details, layer, Full(parent)) match {
-          case Full(nd) => JsonResponse(LayerNode.toJSON(nd),
-                                              ("Content-Type" ->
+          case Full(nd) =>  val retVal: JValue = "data" -> LayerNode.toJSON(nd)
+                            JsonResponse(retVal, ("Content-Type" ->
                                                 "application/vnd.api+json") :: Nil,
                                               Nil, 200)
           case _ =>
@@ -200,16 +201,18 @@ object JsonBillHandler extends RestHelper {
         }
       }
     }
-    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: Nil JsonPut NodeComment(comment) => {
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: Nil JsonPut json -> _ => {
       for {
+        user <- User.currentUser ?~ "You must be logged in to perform this function" ~> 403
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        comment <- tryo{json.extract[NodeCommentCase]} ?~ "input elements not parsable" ~> 400
       } yield {
-        NodeComment.add(comment.text.get, node, Empty) match {
-          case Full(cm) => JsonResponse(NodeComment.toJSON(cm),
-                                              ("Content-Type" ->
-                                                "application/vnd.api+json") :: Nil,
-                                              Nil, 200)
+        NodeComment.add(comment.text, node, Empty) match {
+          case Full(cm) =>  val retVal: JValue = "data" -> NodeComment.toJSON(cm)
+                            JsonResponse(retVal, ("Content-Type" ->
+                                                  "application/vnd.api+json") :: Nil,
+                                                  Nil, 200)
           case _ =>
             JsonResponse("errors" -> S.errors.map(_._2.openOr("")),
               ("Content-Type" -> "application/vnd.api+json") :: Nil,
@@ -217,19 +220,47 @@ object JsonBillHandler extends RestHelper {
         }
       }
     }
-    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: commentID :: Nil JsonPut NodeComment(comment) => {
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: commentID :: Nil JsonPut json -> _ => {
       for {
+        user <- User.currentUser ?~ "You must be logged in to perform this function" ~> 403
         layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
         node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
         parent <- NodeComment.find(By(NodeComment.node, node), By(NodeComment.hash, commentID)) ?~ "comment not found"
+        comment <- tryo{json.extract[NodeCommentCase]} ?~ "input elements not parsable" ~> 400
       } yield {
-        NodeComment.add(comment.text.get, node, Full(parent)) match {
-          case Full(cm) => JsonResponse(NodeComment.toJSON(cm),
-            ("Content-Type" ->
-              "application/vnd.api+json") :: Nil,
-            Nil, 200)
+        NodeComment.add(comment.text, node, Full(parent)) match {
+          case Full(cm) => val retVal: JValue = "data" -> NodeComment.toJSON(cm)
+                          JsonResponse(retVal, ("Content-Type" ->
+                                                "application/vnd.api+json") :: Nil,
+                                                Nil, 200)
           case _ =>
             JsonResponse("errors" -> S.errors.map(_._2.openOr("")),
+              ("Content-Type" -> "application/vnd.api+json") :: Nil,
+              Nil, 400)
+        }
+      }
+    }
+    case Bill(bill) :: "parts" :: layerID :: "nodes" :: nodeID :: "comments" :: commentID :: Nil JsonPost json -> _ => {
+      for {
+        user <- User.currentUser ?~ "You must be logged in to perform this function" ~> 403
+        layer <- BillLayer.find(By(BillLayer.bill, bill), By(BillLayer.hash, layerID)) ?~ "text section not found"
+        node <- LayerNode.find(By(LayerNode.layer, layer), By(LayerNode.hash, nodeID)) ?~ "node not found"
+        comment <- NodeComment.find(By(NodeComment.node, node), By(NodeComment.hash, commentID)) ?~ "comment not found"
+        edits <- tryo{json.extract[PostNodeCommentCase]} ?~ "input elements not parsable" ~> 400
+      } yield {
+        edits.text.map(comment.text(_))
+        edits.vote.map(v => {
+          comment.doVote(v)
+        })
+
+        comment.validate match {
+          case Nil => comment.save
+            val retVal: JValue = "data" -> NodeComment.toJSON(comment)
+            JsonResponse(retVal, ("Content-Type" ->
+              "application/vnd.api+json") :: Nil,
+              Nil, 200)
+          case errors: List[FieldError] =>
+            JsonResponse("errors" -> errors.map(_.toString()),
               ("Content-Type" -> "application/vnd.api+json") :: Nil,
               Nil, 400)
         }

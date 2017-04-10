@@ -21,11 +21,13 @@ function addLayerToContainer(layer, parent) {
 
     newLayer.append(toAdd).append(layerBtnSet(layer));
 
-    newLayer.on('mouseover', function(e){
-        e.stopPropagation();
-        $('.indent').removeClass('active');
-        $(this).addClass("active");
-    });
+    if(layer.attributes.part_type != "quoted-block") {
+        newLayer.on('mouseover', function(e){
+            e.stopPropagation();
+            $('.indent').removeClass('active');
+            $(this).addClass("active");
+        });
+    }
 
     parent.append(newLayer);
 
@@ -46,11 +48,30 @@ function layerBtnSet( layer ) {
         //$('#layer-tree').empty();
         $("#text").show();
         selectedLayer = layer;
+        window.location.hash = layer.id;
         $("#layer-tree").tree('loadPart', billID, layer.id);
         $('.owl-carousel').trigger('to.owl.carousel', [1, 250]);
     });
 
     return container;
+};
+
+function findPart( search, id ) {
+    var found = null;
+
+    for(var x = 0, len = search.length; x < len; x++) {
+        if(search[x].id == id) {
+            found = search[x];
+            break;
+        }
+        else if(search[x].children) {
+            found = findPart( search[x].children, id );
+            if(found) break;
+        }
+        else found = null;
+    }
+
+    return found;
 };
 
 $(document).ready(function(){
@@ -76,9 +97,9 @@ $(document).ready(function(){
 
     $("#edit-node").on("local.setupEdit", function( event, node ){
         var modal = $("#generic-modal");
-        var template = $("#edit-form").clone().html();
 
         $(this).off("click").on("click", function(){
+            var template = $("#edit-form").clone().html();
             var body = modal.find(".modal-body");
             var title = modal.find(".modal-title");
 
@@ -115,11 +136,20 @@ $(document).ready(function(){
                         contentType: "application/json",
                         data: JSON.stringify(newNode)
                     }).done(function( json ){
-                        if(!node.children) node.children = [json];
-                        else node.children.push(json);
+                        if(!node.children) node.children = [json.data];
+                        else node.children.push(json.data);
 
                         $("#layer-tree").tree("update", node);
-                        $("#layer-tree").tree("selectNode", json);
+                        $("#layer-tree").tree("selectNode", json.data);
+                    }).fail(function( jqXHR ){
+                        var modal = $("#confirm-modal");
+                        var title = modal.find(".modal-title");
+                        var body = modal.find(".modal-body");
+
+                        title.text(jqXHR.statusText);
+                        body.text(jqXHR.responseText);
+
+                        modal.modal('show');
                     });
                 }
 
@@ -130,7 +160,64 @@ $(document).ready(function(){
         });
     });
 
+    $("#comment-btn").on("local.setup", function( event, node ){
+        var modal = $("#generic-modal");
+
+        $(this).off("click").on("click", function(){
+            var template = $("#comment-form").clone().html();
+            var body = modal.find(".modal-body");
+            var title = modal.find(".modal-title");
+            var commitBtn = modal.find("[name='generic-save']");
+
+            title.text("Add Comment");
+            body.empty().html(template);
+            var text = body.find("textarea");
+
+            commitBtn.off("click").on("click", function(){
+                var newComment = {
+                    "text": text.val()
+                };
+
+                if(newComment.text.length > 0) {
+                    $.ajax({
+                        url: "/api/v1/bills/" + billID + "/parts/" + selectedLayer.id + "/nodes/" + node.id + "/comments",
+                        method: "PUT",
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify(newComment)
+                    }).done(function( json ){
+                        $("#layer-tree").tree("addComment", json.data);
+                    }).fail(function( jqXHR ){
+                        var modal = $("#confirm-modal");
+                        var title = modal.find(".modal-title");
+                        var body = modal.find(".modal-body");
+
+                        title.text(jqXHR.statusText);
+                        body.text(jqXHR.responseText);
+
+                        modal.modal('show');
+                    });
+                }
+
+                modal.modal('hide');
+            });
+
+            modal.modal('show');
+        });
+
+    });
+
     setCarouselHeight();
+
+    $("#share-fb").on("click",function(){
+        var fbpopup = window.open("https://www.facebook.com/sharer/sharer.php?u="+encodeURIComponent(window.location.href), "pop", "width=600, height=400, scrollbars=no");
+        return false;
+    });
+
+    $("#share-tw").on("click",function(){
+        var fbpopup = window.open("https://twitter.com/intent/tweet?url="+encodeURIComponent(window.location.href)+"&hashtags=becongress", "pop", "width=600, height=400, scrollbars=no");
+        return false;
+    });
 
     var path = window.location.pathname;
     var match = path.match(/.+\/(.+?)$/);
@@ -159,6 +246,19 @@ $(document).ready(function(){
                     json.data.relationships.parts.map(function( obj ){
                         addLayerToContainer( obj, container );
                     });
+
+                    var hash = window.location.hash.replace(/^#/, "");
+                    if(hash.length > 0) {
+                        var split = hash.split("::");
+                        var found = findPart(json.data.relationships.parts, split[0]);
+
+                        if(found) {
+                            $("#text").show();
+                            selectedLayer = found;
+                            $("#layer-tree").tree('loadPart', billID, found.id);
+                            $('.owl-carousel').trigger('to.owl.carousel', [1, 250]);
+                        }
+                    }
                 }
             }
         });

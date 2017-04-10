@@ -18,7 +18,7 @@
 package code
 package model
 
-import net.liftweb.mapper._
+import net.liftweb.mapper.{By, _}
 import net.liftweb.util._
 import Helpers._
 import net.liftweb.common._
@@ -28,11 +28,9 @@ import Loc._
 import js._
 import JsCmds._
 import net.liftmodules.FoBoBs.mapper._
-
 import net.liftweb.json._
 
-import scala.xml.{NodeSeq, Attribute, Text, MetaData, Elem}
-
+import scala.xml.{Attribute, Elem, MetaData, NodeSeq, Text}
 import code.mapper.MappedList
 
 /**
@@ -193,7 +191,6 @@ object User extends User with MetaMegaProtoUser[User] with BootstrapMegaMetaProt
                                                          email,
                                                          locale,
                                                          timezone)
-
 }
 
 /**
@@ -217,5 +214,9 @@ class User extends MegaProtoUser[User] {
   object lastAccess extends MappedDateTime(this)
   object accessRep extends MappedInt(this)
   object reputation extends MappedInt(this)
+
+  def votedForComment(comment: NodeComment): Box[UserCommentVote] =
+    UserCommentVote.find(By(UserCommentVote.user, this),
+      By(UserCommentVote.comment, comment))
 }
 

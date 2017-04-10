@@ -27,14 +27,15 @@
                 <div id="layer-info">
                     <div class="row">
                         <a id="edit-node" class="btn btn-primary">Edit</a>
-                        <a class="btn btn-default">Share</a>
+                        <a id="share-fb" class="btn btn-default"><i class="fa fa-facebook"></i></a>
+                        <a id="share-tw" class="btn btn-default"><i class="fa fa-twitter"></i></a>
                         <div class="col-md-12" id="title">
                             <h4 name="header"></h4>
                             <p name="text"></p>
                         </div>
                     </div>
                     <div class="row">
-                        <a class="btn btn-primary">Comment</a>
+                        <a id="comment-btn" class="btn btn-primary">Comment</a>
                         <div class="col-md-12" id="comments">
                             <div id="comment-id-root"></div>
                         </div>
@@ -59,9 +60,30 @@
             </div>
         </div>
 
+        <div data-lift="tail" id="confirm-modal" class="modal fade" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Modal title</h4>
+                    </div>
+                    <div class="modal-body"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script data-lift="tail" type="x-template" id="edit-form">
             <div>
                 <input type="text" class="form-control" value="" style="font-weight: bold;margin-bottom: 10px;" placeholder="Heading" />
+                <textarea class="form-control" rows="9"></textarea>
+            </div>
+        </script>
+
+        <script data-lift="tail" type="x-template" id="comment-form">
+            <div>
                 <textarea class="form-control" rows="9"></textarea>
             </div>
         </script>
