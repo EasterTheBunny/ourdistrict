@@ -118,7 +118,7 @@ class Boot {
     // any ORM you want
     Schemifier.schemify(true, Schemifier.infoF _, User, Node, Topic, Comment, Soapbox, Bill, BillSponsor,
     							Committee, CommitteeBill, CommitteeTopic, CommitteeUser, Sponsor, Action, Visualization,
-                  SortedTopic, SortedTopicCookie, BillLayer, LayerNode, NodeComment)
+                  SortedTopic, SortedTopicCookie, BillLayer, LayerNode, NodeComment, UserCommentVote)
 
     // where to search snippet
     LiftRules.addToPackages("code")
@@ -140,7 +140,6 @@ class Boot {
     //LiftRules.explicitlyParsedSuffixes += "pdf"
     
     LiftRules.statelessDispatch.append(PDFServer)
-    LiftRules.dispatch.append(JsonNodeHandler)
     LiftRules.dispatch.append(JsonDataHandler)
     LiftRules.dispatch.append(JsonBillHandler)
     LiftRules.dispatch.append(JsonUserSortedListHandler)

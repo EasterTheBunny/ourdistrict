@@ -1,3 +1,10 @@
+jQuery.fn.d3Click = function () {
+  this.each(function (i, e) {
+    var evt = new MouseEvent("click");
+    e.dispatchEvent(evt);
+  });
+};
+
 $.widget("custom.tree", {
     _create: function(){
         var elem = this.element;
@@ -42,12 +49,24 @@ $.widget("custom.tree", {
                 root.x0 = height / 2;
                 root.y0 = 0;
 
+                var hash = window.location.hash.replace(/^#/, "");
+                var toSelect = null;
+                var toSearch = null;
+
+                if(hash.length > 0) {
+                    var split = hash.split("::");
+                    if(split.length > 1) {
+                        toSearch = split[1];
+                    }
+                }
+
                 /**
                 *   collapse puts all children of all elements in a
                 *   'hidden' space so as not to be rendered. to show
                 *   all on load, comment out this area.
                 */
                 function collapse(d) {
+                    if(toSearch && toSearch == d.id) toSelect = d;
                     if (d.children && d.children.length > 0) {
                         d._children = d.children;
                         d._children.forEach(collapse);
@@ -62,7 +81,41 @@ $.widget("custom.tree", {
                 widget.root = root;
 
                 widget.update(widget.root);
-                widget._setupNodeInfo(widget.root);
+                if(toSelect) {
+                    var pathToTarget = [];
+
+                    function updateToTarget( start, target ) {
+                        var children = start.children;
+                        if(!children) children = start._children;
+
+                        if(start.id == target.id) return 1;
+                        else if(children) {
+                            for(var x = 0, len = children.length; x < len; x++) {
+                                if(updateToTarget(children[x], target) > -1) return pathToTarget.push(start);
+                            }
+                        } else return null;
+                    }
+
+                    for(var x = 0, len = root.children.length; x < len; x++) {
+                        if(updateToTarget( root.children[x], toSelect )) break;
+                    }
+
+                    pathToTarget = pathToTarget.reverse();
+                    for(var x = 0, len = pathToTarget.length; x < len; x++) {
+                        var d = pathToTarget[x];
+                        if(d._children) {
+                            d.children = d._children;
+                            d._children = null;
+                        }
+
+                        widget.update(d);
+                    }
+
+                    $("#" + toSelect.id).d3Click();
+                } else {
+                    widget.selectedNode = root.id;
+                    widget._setupNodeInfo(widget.root);
+                }
             }
 
         }).fail(function(){
@@ -76,6 +129,7 @@ $.widget("custom.tree", {
         var tree = this.tree;
         var duration = this.duration;
         var diagonal = this.diagonal;
+        window.location.hash = this.part + "::" + source.id;
 
         // Compute the new tree layout.
         var nodes = tree.nodes(this.root).reverse(),
@@ -170,6 +224,8 @@ $.widget("custom.tree", {
         // Toggle children on click.
         this._setupNodeInfo( d );
 
+        this.selectedNode = d.id;
+
         if(d.id != root.id) {
             if (d.children) {
                 d._children = d.children;
@@ -184,9 +240,11 @@ $.widget("custom.tree", {
     },
 
     selectNode: function( d ) {
-        // this isn't working and i don't know why
-        // need to go, won't finish
-        $("#" + d.id).trigger("click");
+        $("#" + d.id).d3Click();
+    },
+
+    addComment: function( comment ) {
+        this._newNodeComment( comment, $("#comment-id-root") );
     },
 
     _leadsToTarget: function( d, target ) {
@@ -203,6 +261,7 @@ $.widget("custom.tree", {
         $("#title").find("[name='header']").text(node.attributes.statement);
         $("#title").find("[name='text']").text(node.attributes.details);
         $("#edit-node").trigger("local.setupEdit", [ node ] );
+        $("#comment-btn").trigger("local.setup", [ node ] );
 
         this._setupNodeComments(node);
     },
@@ -234,60 +293,145 @@ $.widget("custom.tree", {
         $('.collapse.panel-body').collapse('show');
     },
 
-    _newNodeComment: function( comment, parent ) {
+    _newCommentReply: function( comment ) {
+        var widget = this;
+        var modal = $("#generic-modal");
+
+        var template = $("#comment-form").clone().html();
+        var body = modal.find(".modal-body");
+        var title = modal.find(".modal-title");
+        var commitBtn = modal.find("[name='generic-save']");
+
+        title.text("Add Comment");
+        body.empty().html(template);
+        var text = body.find("textarea");
+
+        commitBtn.off("click").on("click", function(){
+            var newComment = {
+                "text": text.val()
+            };
+
+            if(newComment.text.length > 0) {
+                $.ajax({
+                    url: "/api/v1/bills/" + widget.bill + "/parts/" + widget.part + "/nodes/" + widget.selectedNode + "/comments/" + comment.id,
+                    method: "PUT",
+                    dataType: "json",
+                    contentType: "application/json",
+                    data: JSON.stringify(newComment)
+                }).done(function( json ){
+                    widget._newNodeComment( json.data, $("#" + comment.id) );
+                }).fail(function( jqXHR ){
+                    var modal = $("#confirm-modal");
+                    var title = modal.find(".modal-title");
+                    var body = modal.find(".modal-body");
+
+                    title.text(jqXHR.statusText);
+                    body.text(jqXHR.responseText);
+
+                    modal.modal('show');
+                });
+            }
+
+            modal.modal('hide');
+        });
+
+        modal.modal('show');
+    },
+
+    _newNodeComment: function( comment, container ) {
+        var widget = this;
         // if parent exists in DOM, insert into parent
         // if children exist in the DOM, wrap them into element
+
+        var thevote = 0;
+        if(comment.attributes.upvotes == 0 && comment.attributes.downvotes == 0) {
+            thevote = comment.attributes.uservote;
+        } else {
+            thevote = comment.attributes.upvotes - comment.attributes.downvotes;
+        }
 
         var reply_button = $('<span class="glyphicon glyphicon-comment" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="reply">&nbsp;</span>');
         var downvote = $('<span class="glyphicon glyphicon-thumbs-down" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="vote down">&nbsp;</span>');
         var upvote = $('<span class="glyphicon glyphicon-thumbs-up" aria-hidden="true" style="cursor:pointer" data-toggle="tooltip" data-placement="right" title="vote up">&nbsp;</span>');
-        var vote = $('<span class="pull-right" style="margin-right:15px;font-size:12px;"></span>').append(comment.attributes.vote + " points");
+        var vote = $('<span class="pull-right" style="margin-right:15px;font-size:12px;"></span>').append(thevote + " points");
         //vote.append(vote);
 
-        reply_button.bind("click", $.proxy(this._newCommentReply, this));
+        reply_button.bind("click", $.proxy(this._newCommentReply, this, comment));
 
         var downvotefunc = $.proxy(function(event){
-            var element = $(event.target);
-            var id = parent.attr('id').split('-');
-            var self = this;
-            $.post("/json/vote/comment/" + id[2], "vote=down").done(function(data) {
-                //self.comments.push(data.comment);
-                //self._newComment(data.comment.id, data.comment.parent, "username", data.comment.text);
-                //event.data.remove();
-                if(upvote.hasClass("uservote")) upvote.removeClass("uservote");
+            $.ajax({
+                url: "/api/v1/bills/" + widget.bill + "/parts/" + widget.part + "/nodes/" + widget.selectedNode + "/comments/" + comment.id,
+                method: "POST",
+                contentType: "application/json",
+                dataType: "json",
+                data: JSON.stringify({ vote: -1 })
+            }).done(function( json ){
+                var com = json.data;
+
+                var thevote = 0;
+                if(com.attributes.upvotes == 0 && com.attributes.downvotes == 0) {
+                    thevote = com.attributes.uservote;
+                } else {
+                    thevote = com.attributes.upvotes - com.attributes.downvotes;
+                }
+
+                upvote.removeClass("uservote");
                 downvote.addClass("uservote");
-                vote.empty().append(data.comment.vote + " points");
+                vote.empty().append(thevote + " points");
                 downvote.unbind("click");
                 upvote.bind("click", upvotefunc);
-            }).fail(function(){
-                alert("An error occured. You must be logged in to use this function.");
+            }).fail(function( jqXHR ){
+                var modal = $("#confirm-modal");
+                var title = modal.find(".modal-title");
+                var body = modal.find(".modal-body");
+
+                title.text(jqXHR.statusText);
+                body.text(jqXHR.responseText);
+
+                modal.modal('show');
             });
         }, this);
 
         var upvotefunc = $.proxy(function(event){
-            var element = $(event.target);
-            var id = parent.attr('id').split('-');
-            var self = this;
-            $.post("/json/vote/comment/" + id[2], "vote=up").done(function(data) {
-                //self.comments.push(data.comment);
-                //self._newComment(data.comment.id, data.comment.parent, "username", data.comment.text);
-                //event.data.remove();
+            $.ajax({
+                url: "/api/v1/bills/" + widget.bill + "/parts/" + widget.part + "/nodes/" + widget.selectedNode + "/comments/" + comment.id,
+                method: "POST",
+                contentType: "application/json",
+                dataType: "json",
+                data: JSON.stringify({ vote: 1 })
+            }).done(function( json ){
+                var com = json.data;
+
+                var thevote = 0;
+                if(com.attributes.upvotes == 0 && com.attributes.downvotes == 0) {
+                    thevote = com.attributes.uservote;
+                } else {
+                    thevote = com.attributes.upvotes - com.attributes.downvotes;
+                }
+
                 upvote.addClass("uservote");
-                if(downvote.hasClass("uservote")) downvote.removeClass("uservote");
-                vote.empty().append(data.comment.vote + " points");
+                downvote.removeClass("uservote");
+                vote.empty().append(thevote + " points");
                 upvote.unbind("click");
                 downvote.bind("click", downvotefunc);
-            }).fail(function(){
-                alert("An error occured. You must be logged in to use this function.");
+            }).fail(function( jqXHR ){
+                var modal = $("#confirm-modal");
+                var title = modal.find(".modal-title");
+                var body = modal.find(".modal-body");
+
+                title.text(jqXHR.statusText);
+                body.text(jqXHR.responseText);
+
+                modal.modal('show');
             });
         }, this);
 
-        if(comment.uservote >= 0) {
+        if(comment.attributes.uservote >= 0) {
             if(comment.attributes.uservote > 0) upvote.addClass('uservote');
             downvote.bind("click", downvotefunc);
         }
 
-        if(comment.uservote <= 0) {
+        if(comment.attributes.uservote <= 0) {
             if(comment.attributes.uservote < 0) downvote.addClass('uservote');
             upvote.bind("click", upvotefunc);
         }
@@ -296,26 +440,25 @@ $.widget("custom.tree", {
         pull.append(upvote);
         pull.append(downvote);
         pull.append(reply_button);
+        pull.append(vote);
 
         var top = $('<div id="comment-id-' + comment.id + '"></div>').addClass("panel panel-comment" + " parent-id-" + comment.attributes.parent);
         var heading = $('<div data-toggle="collapse" href="#' + comment.id + '" aria-expanded="true" aria-controls="' + comment.id + '"></div>').addClass("panel-heading");
-        var title = $('<span></span>').addClass("panel-title").append(comment.user).append(vote);
+        var title = $('<span></span>').addClass("panel-title").append(comment.attributes.user);
         //heading.append(pull);
 
         heading.append(title);
         top.append(heading);
 
-        var body = $('<div id="' + comment.id + '"></div>').addClass("panel-body collapse").append(comment.attributes.text);
+        var body = $('<div id="' + comment.id + '"></div>').addClass("panel-body").append(comment.attributes.text);
         body.append(pull);
-
-        var container = parent;
 
         top.append(body);
         container.append(top);
 
         if(comment.children && comment.children.length > 0) {
             $.each(comment.children, function(index, value){
-                newNodeComment( value, body );
+                widget._newNodeComment( value, body );
             });
         }
     }
