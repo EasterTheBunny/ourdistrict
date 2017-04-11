@@ -118,7 +118,8 @@ class Boot {
     // any ORM you want
     Schemifier.schemify(true, Schemifier.infoF _, User, Node, Topic, Comment, Soapbox, Bill, BillSponsor,
     							Committee, CommitteeBill, CommitteeTopic, CommitteeUser, Sponsor, Action, Visualization,
-                  SortedTopic, SortedTopicCookie, BillLayer, LayerNode, NodeComment, UserCommentVote)
+                  SortedTopic, SortedTopicCookie, BillLayer, LayerNode, NodeComment, UserCommentVote,
+                  BillSubject, Subject)
 
     // where to search snippet
     LiftRules.addToPackages("code")
@@ -145,7 +146,7 @@ class Boot {
     LiftRules.dispatch.append(JsonUserSortedListHandler)
 
     Props.get("settings.fullnode") match {
-      case Full(opt) if(opt == "true") => {
+      case Full(opt) if opt == "true" => {
         //ParseBillsToDB ! ParseBillsToDB.ParseBills
         ParseLegislatorsToDB ! ParseLegislatorsToDB.ParseLegislators
 
