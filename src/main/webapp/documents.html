@@ -6,8 +6,50 @@
   </head>
   <body class="lift:content_id=main">
     <div id="main" class="lift:surround?with=minimal;at=content">
+      <head_merge>
+        <!-- <link rel="stylesheet" type="text/css" href="/static/css/jquery.pagewalkthrough.min.css" /> -->
+        <script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+        <style type="text/css">
 
-      <meta lift="embed?what=_topics">
+        </style>
+      </head_merge>
+
+      <div class="container-fluid" style="margin-top:80px">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-12">
+              <form class="form-inline">
+                <div class="form-group">
+                  <div class="input-group input-group-lg">
+      							<span class="input-group-addon" id="search-addon">
+      								<span class="glyphicon glyphicon-search"></span>
+      							</span>
+                    <input id="search" type="text" class="form-control" placeholder="search for discussions" aria-describedby="search-addon" size="100" style="border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;" />
+                    <span class="input-group-btn">
+      							  <button type="submit" class="btn btn-primary">Search</button>
+      							</span>
+                  </div>
+                </div>
+
+              </form>
+            </div>
+          </div>
+          <div class="row lift:Documents" style="margin-top:30px">
+            <div id="bills" class="col-md-12">
+              <div class="panel panel-default">
+                <div class="panel-heading">
+                  <h3 class="panel-title"><a href="">@</a></h3>
+                </div>
+                <div class="panel-body">
+                  @
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script data-lift="tail" type="text/javascript" src="/static/js/searchDocuments.min.js"></script>
      
     </div>
   </body>

@@ -29,7 +29,7 @@ import net.liftweb.db.DBLogEntry
 import net.liftmodules.FoBo
 import code.model._
 import code.lib._
-import code.snippet.{AllTopicsPage, ChartsPage, TopicPage, DocumentPage}
+import code.snippet.{ChartsPage, DocumentPage, SearchDocuments}
 import scravatar.{DefaultImage, Gravatar}
 import java.sql._
 
@@ -141,6 +141,7 @@ class Boot {
     //LiftRules.explicitlyParsedSuffixes += "pdf"
     
     LiftRules.statelessDispatch.append(PDFServer)
+    LiftRules.statelessDispatch.append(AutocompleteHandler)
     LiftRules.dispatch.append(JsonDataHandler)
     LiftRules.dispatch.append(JsonBillHandler)
     LiftRules.dispatch.append(JsonUserSortedListHandler)
@@ -251,9 +252,8 @@ class Boot {
         home          >> LocGroup("site", "navbar"),
         thepark,
         ChartsPage.menu,
-        AllTopicsPage.menu,
-        DocumentPage.menu >> Hidden,
-        TopicPage.menu >> Hidden >> Topic.AddAccountMenusAfter >> Soapbox.AddSoapboxMenusAfter,
+        SearchDocuments.menu,
+        DocumentPage.menu >> Hidden >> Soapbox.AddSoapboxMenusAfter,
         ddLabel1      >> LocGroup("topRight") >> PlaceHolder submenus (
             divider1  /*>> FoBo.TBLocInfo.Divider*/ >> userMenu
             )

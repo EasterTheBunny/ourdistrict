@@ -172,11 +172,12 @@ trait JSONBillExtraction {
 
     if(billCase.subjects.nonEmpty) {
       billCase.subjects.foreach(s => {
-        allSubjectInfo.find(_.text.get == s) match {
+        allSubjectInfo.find(_.text.get.toLowerCase == s.trim.toLowerCase) match {
           case Some(found) => BillSubject.join(theBill, found)
           case _ =>
             val sub = Subject.create.text(s)
             sub.save
+            allSubjectInfo = allSubjectInfo :+ sub
             BillSubject.join(theBill, sub)
         }
       })
