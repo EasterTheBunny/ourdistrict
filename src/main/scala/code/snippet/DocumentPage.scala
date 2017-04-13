@@ -302,7 +302,7 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
         "@headline *" #> "We didn't find anything." &
         "@headline_text *" #> "The bill you entered may not exist. What matters is that we don't have it." &
         "@init_bill *" #> "Search Again" &
-        "@init_bill [href]" #> ("/" + AllTopicsPage.menu.path.map(_.pathItem).mkString("/"))
+        "@init_bill [href]" #> ("/" + SearchDocuments.menu.path.map(_.pathItem).mkString("/"))
     }
   }
 }

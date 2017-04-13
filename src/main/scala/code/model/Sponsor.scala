@@ -18,10 +18,10 @@
 package code
 package model
 
-import net.liftweb.common._
+import code.mapper.Sponsors
+
 import net.liftweb.mapper._
 import net.liftweb.util._
-import net.liftweb.http._
 
 class Sponsor extends LongKeyedMapper[Sponsor] with IdPK {
   def getSingleton = Sponsor
@@ -66,7 +66,7 @@ class Sponsor extends LongKeyedMapper[Sponsor] with IdPK {
   
   def countProposedBills = BillSponsor.count(By(BillSponsor.sponsor, this.id.get),
 		  									By(BillSponsor.congress, Props.get("settings.congress").getOrElse("115").toInt),
-		  									By(BillSponsor.sponsorship, "sponsor"))
+		  									By(BillSponsor.sponsorship, Sponsors.Sponsor))
 		  									/*
 		  									 * 
 		  									NotBy(BillSponsor.bill_type, "hconres"),

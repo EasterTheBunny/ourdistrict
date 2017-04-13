@@ -29,6 +29,8 @@ import rest._
 import net.liftweb.json.JsonAST.JValue
 import net.liftweb.json.JsonDSL._
 
+import xml.NodeSeq
+
 case class LayerNodeCase(statement: Option[String],
                          details: String)
 
@@ -53,11 +55,59 @@ object JsonBillHandler extends RestHelper {
           congressStr <- S.param("congress") ?~ "You must define a congress to narrow the results." ~> 400
           congress <- asInt(congressStr) ?~ "Congress must be parsable to an integer" ~> 400
         } yield {
-          val limit = S.param("limit").map(_.toLong) openOr 1000L
-          val offset = S.param("offset").map(_.toLong) openOr 0L
+          def paginate(offsetParam: Box[String], limitParam: Box[String]): Box[List[QueryParam[_ <: Bill]]] = {
+            (offsetParam, limitParam) match {
+              case (Full(o), Full(l)) =>
+                for {
+                  offset <- tryo{o.toLong} ?~! "integer parse error. offset must be of type long." ~> 400
+                  limit <- tryo{l.toLong} ?~! "integer parse error. limit must be of type long." ~> 400
+                } yield {
+                  StartAt(offset) :: MaxRows(limit) :: Nil
+                }
+              case (Full(_), Empty) => Failure("limit required for pagination.", Empty, Empty)
+              case (Empty, Full(_)) => Failure("offset required for pagination.", Empty, Empty)
+              case _ => Full(Nil)
+            }
+          }
 
-          val retVal: JValue = ("data" -> Bill.toJSON(Bill.findAll(By(Bill.congress, congress), StartAt(offset), MaxRows(limit))))
-          retVal
+          def filter: Box[List[QueryParam[_ <: Bill]]] = {
+            S.param("filter[subject]") match {
+              case Full(s) =>
+                for {
+                  filtered <- tryo{s.split(",").map(_.toLong)} ?~! "integer parse error. subject ids must be of type long." ~> 400
+                } yield {
+                  In(Bill.id, BillSubject.bill, ByList(BillSubject.id, filtered)) :: Nil
+                }
+              case _ => Empty
+            }
+          }
+
+          val possibles = paginate(S.param("page[offset]"), S.param("page[limit]")) :: filter :: Nil
+
+          var errors: List[String] = Nil
+
+          val conditions: List[QueryParam[_ <: Bill]] = possibles
+            .foldLeft(List[QueryParam[_ <: Bill]](By(Bill.congress, congress)))((lst, item) => {
+              item match {
+                case Full(m) => lst ++ m
+                case Failure(message, _, _) =>
+                  errors = errors :+ message
+                  lst
+                case Empty => lst
+              }
+            })
+
+          errors match {
+            case Nil =>
+              val retVal: JValue = "data" -> Bill.toJSON(Bill.findAll(conditions.map(_.asInstanceOf[QueryParam[Bill]]):_*))
+              JsonResponse(retVal, ("Content-Type" ->
+                "application/vnd.api+json") :: Nil,
+                Nil, 200)
+            case e: List[String] =>
+              JsonResponse("errors" -> e,
+                ("Content-Type" -> "application/vnd.api+json") :: Nil,
+                Nil, 400)
+          }
         }
       }
     case Bill(bill) :: Nil JsonGet _ => {

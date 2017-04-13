@@ -18,34 +18,25 @@
 package code
 package model
 
-import code.mapper.{MappedSponsor,Sponsors}
-
 import net.liftweb.common._
 import net.liftweb.mapper._
 import net.liftweb.util._
 import net.liftweb.http._
 
-class BillSponsor extends LongKeyedMapper[BillSponsor] with IdPK {
-  def getSingleton = BillSponsor
+class BillSubject extends LongKeyedMapper[BillSubject] with IdPK {
+  def getSingleton = BillSubject
   object bill extends MappedLongForeignKey(this, Bill) {
     override def dbIndexed_? = true
   }
-  object sponsor extends MappedLongForeignKey(this, Sponsor) {
+  object subject extends MappedLongForeignKey(this, Subject) {
     override def dbIndexed_? = true
   }
-  object sponsor_at extends MappedDate(this)
-  object withdrawn_at extends MappedDate(this)
-  object sponsorship extends MappedSponsor(this) {
-    override def dbIndexed_? : Boolean = true
-  }
-  object bill_type extends MappedString(this, 10)
-  object congress extends MappedInt(this)
 }
 
-object BillSponsor extends BillSponsor with LongKeyedMetaMapper[BillSponsor] {
-  override def dbTableName = "billsponsor"
+object BillSubject extends BillSubject with LongKeyedMetaMapper[BillSubject] {
+  override def dbTableName = "billsubject"
 
-  def join (bill: Bill, sponsor: Sponsor, sponsorship: Sponsors.Value, sponsor_at: java.util.Date, withdrawn_at: java.util.Date) = {
-    this.create.bill(bill).sponsor(sponsor).sponsorship(sponsorship).sponsor_at(sponsor_at).withdrawn_at(withdrawn_at).bill_type(bill.bill_type.get).congress(bill.congress.get).save
+  def join (bill: Bill, subject: Subject) = {
+    this.create.bill(bill).subject(subject).save
   }
 }

@@ -2,7 +2,7 @@ var billID = "";
 var selectedLayer = null;
 
 function setCarouselHeight() {
-    var height = $(window).height() - 273;
+    var height = $(window).height();
     $("body").prepend("<style>.owl-item.active { overflow: auto; height:" + height + "px; }</style>");
 };
 

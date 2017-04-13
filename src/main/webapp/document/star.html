@@ -110,10 +110,33 @@
             }
 
             #layer-info {
-                position: absolute;
-                top: 0;
-                right: 0;
-                width: 400px;
+                position: relative;
+                width: 100%;
+            }
+
+            #layer-info > .row > a:first-child {
+                margin-left: 15px;
+            }
+
+            #layer-tree {
+                display:none;
+            }
+
+            @media (min-width: 992px) {
+                #layer-tree {
+                    display: block;
+                }
+
+                #layer-info {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 400px;
+                }
+
+                #layer-info > .row > a:first-child {
+                    margin-left: 0;
+                }
             }
 
             #layer-info .col-md-12 > div {

@@ -18,6 +18,8 @@
 package code
 package model
 
+import code.mapper.Sponsors
+
 import net.liftweb.common._
 import net.liftweb.mapper._
 import net.liftweb.json._
@@ -37,12 +39,12 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
     override def dbIndexed_? = true
   }
   object number extends MappedInt(this)
-  object official_title extends MappedString(this, 5000)
-  object popular_title extends MappedString(this, 5000)
-  object short_title extends MappedString(this, 5000)
+  object official_title extends MappedText(this)
+  object popular_title extends MappedText(this)
+  object short_title extends MappedText(this)
   object status extends MappedString(this, 50)
   object status_at extends MappedDate(this)
-  object subjects_top_term extends MappedString(this, 100)
+  object subjects_top_term extends MappedText(this)
   object updated_at extends MappedDateTime(this)
   object last_scrape extends MappedDateTime(this)
   /*object actions extends MappedString(this, 20000) {
@@ -54,7 +56,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: List[Action] = read[List[Action]](get)
   }*/
-  object history extends MappedString(this, 5000){
+  object history extends MappedText(this){
     implicit val formats = DefaultFormats // Brings in default date formats etc.
     case class History(active: Boolean, awaiting_signature: Boolean, enacted: Boolean, vetoed: Boolean)
 
@@ -62,7 +64,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: History = read[History](get)
   }
-  object related_bills extends MappedString(this, 5000){
+  object related_bills extends MappedText(this){
     implicit val formats = DefaultFormats // Brings in default date formats etc.
     case class Related(bill_id: Option[String], reason: Option[String], related_type: Option[String])
 
@@ -70,14 +72,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: List[Related] = read[List[Related]](get)
   }
-  object subjects extends MappedString(this, 20000){
-    implicit val formats = DefaultFormats // Brings in default date formats etc.
-
-    def apply(v: List[String]) = super.apply(write(v))
-  
-    def asList: List[String] = read[List[String]](get)
-  }
-  object summary extends MappedString(this, 500000) {
+  object summary extends MappedText(this) {
     implicit val formats = DefaultFormats // Brings in default date formats etc.
     case class Summary(as: Option[String], date: Option[String], text: Option[String])
 
@@ -85,7 +80,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: Summary = read[Summary](get)
   }
-  object titles extends MappedString(this, 100000) {
+  object titles extends MappedText(this) {
     implicit val formats = DefaultFormats // Brings in default date formats etc.
     case class Title(as: Option[String], is_for_portion: Boolean, title: Option[String], title_type: Option[String])
 
@@ -93,7 +88,7 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   
     def asList: List[Title] = read[List[Title]](get)
   }
-  object amendments extends MappedString(this, 100000)
+  object amendments extends MappedText(this)
   object initialized extends MappedBoolean(this) {
     override def defaultValue: Boolean = false
   }
@@ -101,9 +96,10 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   object pdfLink extends MappedString(this, 255)
 
   
-  def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "sponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
-  def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, "cosponsor")).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
-  def committees = CommitteeBill.findAll(By(CommitteeBill.bill, this.id.get)).map(_.committee.obj.openOrThrowException("something must have been deleted"))
+  def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this), By(BillSponsor.sponsorship, Sponsors.Sponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
+  def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this), By(BillSponsor.sponsorship, Sponsors.Cosponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
+  def committees = CommitteeBill.findAll(By(CommitteeBill.bill, this)).map(_.committee.obj.openOrThrowException("something must have been deleted"))
+  def subjects = BillSubject.findAll(By(BillSubject.bill, this)).map(_.subject.obj.openOrThrowException("something must have been deleted"))
 
   def layerForBill(key: String) = BillLayer.find(By(BillLayer.hash, key), By(BillLayer.bill, this))
 }

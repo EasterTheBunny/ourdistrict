@@ -18,35 +18,25 @@
 package code
 package snippet
 
+import model.Topic
+
 import net.liftweb._
-import http._
 import common._
-import util.Helpers._
+import http._
+import sitemap._
+import util._
+import Helpers._
+import Loc._
+import mapper._
+
 import scala.xml.NodeSeq
 
-class OnSubmit extends StatefulSnippet {
-  
-  private var name = ""
-  private var age = "0"
-    
-  private val whence = S.referer openOr "/"
-  
-  def dispatch = {case "render" => render}
-  
+object SearchDocuments {
+  // define the menu item for the page that
+  // will display all items
+  lazy val menu = Menu.i("Documents") / "documents" >> Loc.Snippet("Documents", render) >> LocGroup("navbar")
+
+  // display the items
   def render =
-    "name=name" #> SHtml.text(name, name = _, "id" -> "the_name") &
-    "name=age" #> SHtml.text(age, age = _) &
-    "type=submit" #> SHtml.onSubmitUnit(process)
-  
-  private def process() =
-    
-    asInt(age) match {
-      case Full(a) if a < 13 => S.error("Too young!")
-      case Full(a) => {
-        S.notice("Name: "+name)
-        S.notice("Age: "+age)
-        S.redirectTo(whence)
-      }
-      case _ => S.error("Age doesn't parse as a number")
-    }
+    "#topics *" #> ""
 }

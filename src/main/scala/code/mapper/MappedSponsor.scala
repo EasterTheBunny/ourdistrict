@@ -5,34 +5,33 @@
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
-* 
+*
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
-* 
+*
 * You should have received a copy of the GNU General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package code
-package snippet
+package mapper
 
-import scala.xml.{NodeSeq, Text}
-import net.liftweb._
-import http._
-import common._
-import util.Helpers._
+import net.liftweb.mapper._
+import net.liftweb.http._
 
-import code.model._
+abstract class MappedSponsor[T <: Mapper[T]](owner: T) extends MappedEnum(owner, Sponsors) {
+  override def defaultValue = Sponsors.Sponsor
+}
 
-class AddEssay extends StatefulSnippet {
-  def dispatch = {
-    case "addEssay" => add _
-  }
-  
-  def add(in: NodeSeq) : NodeSeq = User.currentUser match {
-    case Full(user) => Text("")
-    case _ => Text("")
+object Sponsors extends Enumeration {
+  val Sponsor = new I18NSponsor(1, "Sponsor")
+  val Cosponsor = new I18NSponsor(2, "Cosponsor")
+
+  class I18NSponsor(id: Int, name: String) extends Val(id, name) {
+    override def toString = {
+      S.?(name)
+    }
   }
 }

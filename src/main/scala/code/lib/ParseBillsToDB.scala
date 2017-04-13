@@ -31,6 +31,7 @@ import Serialization._
 import JsonDSL._
 
 import code.model._
+import code.mapper.Sponsors
 
 import java.text.SimpleDateFormat
 import java.io.File
@@ -77,7 +78,7 @@ case class JSONBill(actions: List[JSONAction],
                     sponsor: JSONSponsor,
                     status: String,
                     status_at: String,
-                    subjects: JArray,
+                    subjects: List[String],
                     subjects_top_term: String,
                     summary: JObject,
                     titles: JArray,
@@ -96,6 +97,7 @@ trait JSONBillExtraction {
   protected val timestampLookup: mutable.HashMap[String, mutable.HashMap[String, Bill]] = mutable.HashMap()
   private var allCommitteeInfo: List[Committee] = Nil
   private var allSponsorInfo: List[Sponsor] = Nil
+  private var allSubjectInfo: List[Subject] = Nil
 
   def parseJSONFileToBill(f: File) = {
     val source = scala.io.Source.fromFile(f)
@@ -134,6 +136,7 @@ trait JSONBillExtraction {
                                                                 Sponsor.state,
                                                                 Sponsor.district,
                                                                 Sponsor.title))
+    allSubjectInfo = Subject.findAll
 
     timestampLookup
   }
@@ -159,7 +162,6 @@ trait JSONBillExtraction {
       .short_title(billCase.short_title.getOrElse(""))
       .status(billCase.status)
       .status_at(DateTime.parse(billCase.status_at).toDate)
-      .subjects(prettyRender(billCase.subjects))
       .subjects_top_term(billCase.subjects_top_term)
       .summary(prettyRender(billCase.summary))
       .titles(prettyRender(billCase.titles))
@@ -167,6 +169,19 @@ trait JSONBillExtraction {
       .last_scrape(new java.util.Date())
 
     theBill.save
+
+    if(billCase.subjects.nonEmpty) {
+      billCase.subjects.foreach(s => {
+        allSubjectInfo.find(_.text.get.toLowerCase == s.trim.toLowerCase) match {
+          case Some(found) => BillSubject.join(theBill, found)
+          case _ =>
+            val sub = Subject.create.text(s)
+            sub.save
+            allSubjectInfo = allSubjectInfo :+ sub
+            BillSubject.join(theBill, sub)
+        }
+      })
+    }
 
     mergeActionsAndDB(data = (billCase, theBill), skipCheck = skipCheck)
     mergeCommitteesAndDB(data = (billCase, theBill), skipCheck = skipCheck)
@@ -309,7 +324,7 @@ trait JSONBillExtraction {
         /**
           * this sponsor bill connection doesn't exist; create it
           */
-        BillSponsor.join(billDB, theSpons, "sponsor", billDB.introduced_at.get, null)
+        BillSponsor.join(billDB, theSpons, Sponsors.Sponsor, billDB.introduced_at.get, null)
     }
   }
 
@@ -340,7 +355,7 @@ trait JSONBillExtraction {
       if(!s_exists)
         allSponsorInfo = theSpons +: allSponsorInfo
 
-      BillSponsor.join(bill, theSpons, "cosponsor", caseCosponsor.sponsored_at.map(d => DateTime.parse(d).toDate).orNull, withdrawn)
+      BillSponsor.join(bill, theSpons, Sponsors.Cosponsor, caseCosponsor.sponsored_at.map(d => DateTime.parse(d).toDate).orNull, withdrawn)
     }
 
     billCase.cosponsors.foreach(cs => {
@@ -433,12 +448,12 @@ object ParseBillsToDB extends LiftActor with Loggable with JSONBillExtraction {
           allSponsorBillInfo = BillSponsor.findAllFields(Seq[SelectableField](BillSponsor.bill, BillSponsor.sponsor),
             In(BillSponsor.bill,
               Bill.id,
-              By(Bill.congress, congress.toInt)), By(BillSponsor.sponsorship, "sponsor"))
+              By(Bill.congress, congress.toInt)), By(BillSponsor.sponsorship, Sponsors.Sponsor))
 
           allCosponsorBillInfo = BillSponsor.findAllFields(Seq[SelectableField](BillSponsor.bill, BillSponsor.sponsor),
             In(BillSponsor.bill,
               Bill.id,
-              By(Bill.congress, congress.toInt)), By(BillSponsor.sponsorship, "cosponsor"))
+              By(Bill.congress, congress.toInt)), By(BillSponsor.sponsorship, Sponsors.Cosponsor))
 
           /**
             * setup the lookup structure
