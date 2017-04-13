@@ -30,6 +30,11 @@ import net.liftweb.json.JsonAST._
 
 object AutocompleteHandler extends RestHelper with Loggable {
 
+  object ILike {
+    def apply[O <: Mapper[O]](field: MappedField[String, O], value: String) =
+      Cmp[O, String](field, OprEnum.Like, Full(value), Empty, Full("UPPER"))
+  }
+
   def toJSON (n: List[Subject]): JValue = {
     n.map(s => {
       ("id" -> s.id.get) ~
@@ -42,7 +47,7 @@ object AutocompleteHandler extends RestHelper with Loggable {
       for {
         term <- S.param("term") ?~ "query param required" ~> 400
       } yield {
-        toJSON(Subject.findAll(Like(Subject.text, "%"+term+"%"),
+        toJSON(Subject.findAll(ILike(Subject.text, "%"+term.toUpperCase+"%"),
           OrderBy(Subject.text, Ascending), MaxRows(100)))
       }
     }

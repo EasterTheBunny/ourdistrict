@@ -96,9 +96,10 @@ class Bill extends LongKeyedMapper[Bill] with IdPK {
   object pdfLink extends MappedString(this, 255)
 
   
-  def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, Sponsors.Sponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
-  def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this.id.get), By(BillSponsor.sponsorship, Sponsors.Cosponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
-  def committees = CommitteeBill.findAll(By(CommitteeBill.bill, this.id.get)).map(_.committee.obj.openOrThrowException("something must have been deleted"))
+  def sponsors = BillSponsor.findAll(By(BillSponsor.bill, this), By(BillSponsor.sponsorship, Sponsors.Sponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
+  def cosponsors = BillSponsor.findAll(By(BillSponsor.bill, this), By(BillSponsor.sponsorship, Sponsors.Cosponsor)).map(_.sponsor.obj.openOrThrowException("something must have been deleted"))
+  def committees = CommitteeBill.findAll(By(CommitteeBill.bill, this)).map(_.committee.obj.openOrThrowException("something must have been deleted"))
+  def subjects = BillSubject.findAll(By(BillSubject.bill, this)).map(_.subject.obj.openOrThrowException("something must have been deleted"))
 
   def layerForBill(key: String) = BillLayer.find(By(BillLayer.hash, key), By(BillLayer.bill, this))
 }
