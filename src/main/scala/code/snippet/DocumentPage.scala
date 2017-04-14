@@ -28,15 +28,7 @@ import Helpers._
 import http._
 import sitemap._
 
-import http.js.JsCmd
-import http.js.JsCmds._
-import http.js.jquery.JqJsCmds._
-import http.js.jquery.JqJE._
-import net.liftweb.http.js.JE._
-
-import net.liftmodules.widgets._
-
-import scala.xml.{Text,Node,Elem}
+import scala.xml.{Text,Node}
 import code.model._
 import net.liftweb.json.DefaultFormats
 import net.liftweb.json.Serialization.read
@@ -132,7 +124,9 @@ object DocumentPage extends Loggable {
                         "subsection" :: "paragraph" :: "subparagraph" :: "clause" :: "subclause" :: "item" ::
                         "subitem" :: "appropriations–para" :: "quoted-block" :: Nil
 
-  /**
+  /*
+		* BILLS
+		*
     * ((account | appropriations–para | chapter | subdivision | division | subsection | paragraph | subparagraph | clause | subclause |
     *     item | subitem | part | section | subaccount | subchapter | subpart | subsubaccount | subsubsubaccount | subtitle | title |
     *     quoted–block | graphic | formula | toc | table | list | header | constitution–article | text)+, after–quoted–block)
@@ -212,6 +206,15 @@ object DocumentPage extends Loggable {
     *
     */
 
+	/*
+	RESOLUTION
+	(form, preamble?, resolution–body, official–title–amendment?, impeachment-resolution-signature?, attestation?, endorsement?)
+
+
+
+
+	 */
+
   def menu = Menu.param[Box[Bill]]("Document",
                         Loc.LinkText(bill => Text(bill.map(_.bill_id.get).openOr("Init Document"))),
                         searchByBillId _,
@@ -274,8 +277,10 @@ class DocumentPage(bill_maybe: Box[Bill]) extends Loggable {
               bdy.child.foreach( n => processBillLayer(bill = bill, layer = n) ))
 
             // for resolutions
+						(billXML \ "preamble").map(p => bill.preamble(p.toString))
+						(billXML \\ "resolution-body").foreach(bdy =>
+							bdy.child.foreach( n => processBillLayer(bill = bill, layer = n) ))
 
-            // for amendments
 
             bill.initialized(true).initFrom(meta.urls.xml).pdfLink(meta.urls.pdf).save
             S.redirectTo(DocumentPage.menu.calcHref(Full(bill)))
