@@ -238,6 +238,7 @@ $(document).ready(function(){
                 btn.attr('href', attr.pdf);
 
                 $('#bill-title').text(attr.official_title);
+                $('#bill-preamble').html(attr.preamble);
                 $('#bill-data').append(btn);
 
                 if(json.data.relationships) {
